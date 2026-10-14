@@ -1,0 +1,1522 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciador de Vida & Tarefas Pro</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            background-color: #0b1120;
+            color: #f8fafc;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+        @keyframes slideInRight {
+            from { transform: translateX(120%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .toast-enter {
+            animation: slideInRight 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 pb-24">
+
+    <div class="max-w-7xl mx-auto space-y-8">
+
+        <!-- CABEÇALHO PRINCIPAL -->
+        <header class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-slate-900/80 border border-slate-800 p-6 rounded-2xl shadow-xl backdrop-blur-md">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold bg-gradient-to-r from-indigo-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent flex items-center gap-3">
+                    <i data-lucide="layers" class="text-indigo-400 w-8 h-8"></i>
+                    Gerenciador de Vida & Tarefas
+                </h1>
+                <p class="text-slate-400 text-sm mt-1">Sub-tarefas com progresso, calculadora de notas, links rápidos e modo foco</p>
+            </div>
+
+            <!-- Controles Superiores -->
+            <div class="flex flex-wrap items-center gap-2.5">
+                <!-- Botão MODO FOCO DE HOJE -->
+                <button id="btn-focus-mode" onclick="toggleFocusMode()" class="px-4 py-2 text-xs font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 rounded-xl transition flex items-center gap-2 shadow-lg shadow-amber-500/5">
+                    <i data-lucide="zap" class="w-4 h-4"></i>
+                    <span id="focus-mode-text">Modo Foco de Hoje</span>
+                </button>
+
+                <!-- Botão Calculadora de Notas -->
+                <button onclick="scrollToSection('grades-section')" class="px-3.5 py-2 text-xs font-medium bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 border border-indigo-500/30 rounded-xl transition flex items-center gap-2">
+                    <i data-lucide="calculator" class="w-4 h-4"></i>
+                    Calculadora de Notas
+                </button>
+
+                <!-- Seletor de antecedência dos avisos -->
+                <div class="flex items-center gap-2 bg-slate-800/80 border border-slate-700 px-3 py-2 rounded-xl text-xs">
+                    <i data-lucide="clock" class="w-4 h-4 text-cyan-400"></i>
+                    <span class="text-slate-300 hidden sm:inline">Avisar:</span>
+                    <select id="alert-days-select" onchange="changeAlertWindow(this.value)" class="bg-transparent text-white font-semibold focus:outline-none cursor-pointer">
+                        <option value="1" class="bg-slate-900">Até 1 dia</option>
+                        <option value="3" class="bg-slate-900" selected>Até 3 dias</option>
+                        <option value="7" class="bg-slate-900">Até 7 dias</option>
+                    </select>
+                </div>
+
+                <!-- Botão Notificação Nativa do Windows -->
+                <button id="btn-win-notify" onclick="requestWindowsNotification()" class="px-3 py-2 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-xl transition flex items-center gap-1.5" title="Ativar notificações nativas do Windows 11">
+                    <i data-lucide="monitor-speaker" class="w-4 h-4 text-emerald-400"></i>
+                    <span id="win-notify-text" class="hidden md:inline">Alerta Windows</span>
+                </button>
+
+                <!-- Sininho de Urgências -->
+                <button onclick="toggleAlertModal()" class="relative p-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl transition" title="Ver atividades próximas">
+                    <i data-lucide="bell" class="w-5 h-5 text-amber-400"></i>
+                    <span id="urgent-badge" class="hidden absolute -top-1.5 -right-1.5 bg-rose-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow">0</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- BANNER DO MODO FOCO DE HOJE (Visível apenas quando o Modo Foco está ativo) -->
+        <div id="focus-mode-banner" class="hidden bg-gradient-to-r from-amber-500/20 via-indigo-500/15 to-emerald-500/20 border border-amber-500/40 rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
+            <div class="flex items-center gap-4">
+                <div class="p-3.5 bg-amber-500/20 border border-amber-500/40 rounded-2xl text-amber-300">
+                    <i data-lucide="target" class="w-8 h-8"></i>
+                </div>
+                <div>
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-amber-400">Imersão Total Ativa</span>
+                    <h2 class="text-xl font-bold text-white">Visão: Modo Foco de Hoje</h2>
+                    <p class="text-xs text-slate-300 mt-0.5">Exibindo apenas as metas agendadas para hoje ou atrasadas de todas as áreas da sua vida.</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="text-right hidden sm:block">
+                    <div id="focus-stats-count" class="text-lg font-bold text-white">0 pendentes</div>
+                    <div class="text-[11px] text-slate-400">para concluir hoje</div>
+                </div>
+                <button onclick="toggleFocusMode()" class="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold transition flex items-center gap-2">
+                    <i data-lucide="minimize-2" class="w-4 h-4"></i>
+                    Sair do Modo Foco
+                </button>
+            </div>
+        </div>
+
+        <!-- SEÇÃO 1: SELETOR DE "PARTES DA VIDA" -->
+        <section id="areas-section" class="space-y-3">
+            <div class="flex items-center justify-between">
+                <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                    <i data-lucide="compass" class="w-4 h-4 text-indigo-400"></i>
+                    1. Escolha uma Parte da Vida
+                </h2>
+                <button onclick="openNewAreaModal()" class="text-xs text-indigo-400 hover:text-indigo-300 font-medium flex items-center gap-1">
+                    <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                    Nova Parte da Vida
+                </button>
+            </div>
+
+            <div id="life-areas-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Gerado via JS -->
+            </div>
+        </section>
+
+        <!-- SEÇÃO 2: GERENCIADOR DE TAREFAS, BUSCA, FILTROS E SUB-TAREFAS -->
+        <section class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+            
+            <!-- Topo da Área e Sub-listas -->
+            <div id="area-header-bar" class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+                <div class="flex items-center gap-3">
+                    <div id="active-area-icon" class="p-3 rounded-xl bg-indigo-500/20 text-indigo-400">
+                        <i data-lucide="graduation-cap" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h2 id="active-area-title" class="text-xl font-bold text-white">Faculdade (Poli)</h2>
+                        <p id="active-area-subtitle" class="text-xs text-slate-400">Gerencie suas listas, etapas de progresso e links rápidos</p>
+                    </div>
+                </div>
+
+                <!-- Abas das Sub-listas -->
+                <div class="flex flex-wrap items-center gap-2" id="sublists-tabs">
+                    <!-- Gerado via JS -->
+                </div>
+            </div>
+
+            <!-- Formulário para Adicionar Nova Atividade -->
+            <form id="add-task-form" class="bg-slate-950/60 p-4 rounded-xl border border-slate-800/80 space-y-3">
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+                    <div class="md:col-span-4">
+                        <label class="block text-[11px] text-slate-400 mb-1">Título da Atividade / Prova *</label>
+                        <input type="text" id="task-title" required placeholder="Ex: Relatório de Simulação / Prova 1..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500">
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="block text-[11px] text-slate-400 mb-1">Sub-lista</label>
+                        <select id="task-sublist" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
+                            <!-- Gerado via JS -->
+                        </select>
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="block text-[11px] text-slate-400 mb-1">Prioridade</label>
+                        <select id="task-priority" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
+                            <option value="alta">🔴 Alta Prioridade</option>
+                            <option value="media" selected>🟡 Média Prioridade</option>
+                            <option value="baixa">🔵 Baixa Prioridade</option>
+                        </select>
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="block text-[11px] text-slate-400 mb-1">Data *</label>
+                        <input type="date" id="task-date" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="block text-[11px] text-slate-400 mb-1">Horário</label>
+                        <input type="time" id="task-time" value="14:00" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
+                    </div>
+                </div>
+
+                <!-- Linha extra: Link Rápido e Sub-tarefas iniciais -->
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-3 pt-1">
+                    <div class="md:col-span-4">
+                        <label class="block text-[11px] text-slate-400 mb-1 flex items-center gap-1">
+                            <i data-lucide="link" class="w-3 h-3 text-cyan-400"></i> Link Rápido (Drive, GitHub, AVA, PDF - Opcional)
+                        </label>
+                        <input type="url" id="task-link" placeholder="https://..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500">
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="block text-[11px] text-slate-400 mb-1">Nome do Botão do Link</label>
+                        <input type="text" id="task-link-label" placeholder="Ex: Abrir Repositório / PDF" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500">
+                    </div>
+
+                    <div class="md:col-span-4">
+                        <label class="block text-[11px] text-slate-400 mb-1 flex items-center gap-1">
+                            <i data-lucide="list-checks" class="w-3 h-3 text-emerald-400"></i> Sub-tarefas iniciais separadas por vírgula (Opcional)
+                        </label>
+                        <input type="text" id="task-initial-subtasks" placeholder="Ex: Modelar sistema, Simular malha, Gerar gráficos" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500">
+                    </div>
+
+                    <div class="md:col-span-2 flex items-end">
+                        <button type="submit" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg text-xs transition flex items-center justify-center gap-1.5 shadow-lg shadow-indigo-500/20">
+                            <i data-lucide="plus" class="w-4 h-4"></i>
+                            Criar Tarefa
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <!-- BARRA DE BUSCA INSTANTÂNEA E FILTRO POR PRIORIDADE -->
+            <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-slate-950/40 p-3 rounded-xl border border-slate-800/70">
+                <!-- Busca Instantânea -->
+                <div class="relative flex-1">
+                    <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                    <input 
+                        type="text" 
+                        id="search-input" 
+                        oninput="handleSearchAndFilter()" 
+                        placeholder="Busca instantânea por título, sub-lista ou sub-tarefa... (Pressione '/' para focar)" 
+                        class="w-full bg-slate-900 border border-slate-700/80 rounded-lg pl-9 pr-8 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition"
+                    >
+                    <button id="clear-search-btn" onclick="clearSearch()" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
+                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
+
+                <!-- Filtros de Prioridade -->
+                <div class="flex flex-wrap items-center gap-1.5">
+                    <span class="text-[11px] text-slate-400 mr-1 flex items-center gap-1">
+                        <i data-lucide="filter" class="w-3 h-3"></i> Prioridade:
+                    </span>
+                    <button onclick="setPriorityFilter('todas')" id="prio-btn-todas" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-indigo-500 text-white transition">Todas</button>
+                    <button onclick="setPriorityFilter('alta')" id="prio-btn-alta" class="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-rose-300 hover:bg-slate-700 border border-slate-700 transition">Alta</button>
+                    <button onclick="setPriorityFilter('media')" id="prio-btn-media" class="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-amber-300 hover:bg-slate-700 border border-slate-700 transition">Média</button>
+                    <button onclick="setPriorityFilter('baixa')" id="prio-btn-baixa" class="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-sky-300 hover:bg-slate-700 border border-slate-700 transition">Baixa</button>
+                </div>
+
+                <!-- Ordenação -->
+                <div class="flex items-center gap-1.5">
+                    <select id="sort-select" onchange="handleSearchAndFilter()" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none">
+                        <option value="date">Ordenar: Data mais próxima</option>
+                        <option value="priority">Ordenar: Maior Prioridade</option>
+                        <option value="progress">Ordenar: Maior % de Progresso</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Lista de Tarefas Renderizada -->
+            <div id="tasks-list" class="space-y-3">
+                <!-- Gerado via JS -->
+            </div>
+
+        </section>
+
+        <!-- SEÇÃO 3: CALCULADORA DE NOTAS E PESOS POR DISCIPLINA -->
+        <section id="grades-section" class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+                <div>
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i data-lucide="calculator" class="w-5 h-5 text-indigo-400"></i>
+                        Calculadora de Notas & Pesos por Disciplina
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-0.5">Acompanhe suas médias parciais e descubra exatamente quanto precisa tirar nas próximas avaliações</p>
+                </div>
+
+                <!-- Adicionar Nova Disciplina -->
+                <form id="add-subject-form" class="flex flex-wrap items-center gap-2">
+                    <input type="text" id="subject-name" required placeholder="Nova disciplina (ex: Controle Linear)" class="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500">
+                    <input type="number" id="subject-target" step="0.1" min="1" max="10" value="7.0" title="Média alvo para aprovação" class="w-20 bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-white focus:outline-none focus:border-indigo-500">
+                    <button type="submit" class="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold px-3.5 py-2 rounded-xl text-xs transition flex items-center gap-1">
+                        <i data-lucide="plus" class="w-4 h-4"></i> Adicionar Matéria
+                    </button>
+                </form>
+            </div>
+
+            <div id="subjects-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <!-- Gerado via JS -->
+            </div>
+        </section>
+
+        <!-- SEÇÃO 4: CALENDÁRIO INTERATIVO UNIFICADO -->
+        <section id="calendar-section" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Calendário Mensal (2/3) -->
+            <div class="lg:col-span-2 bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                            <i data-lucide="calendar-days" class="w-5 h-5 text-emerald-400"></i>
+                            Calendário Geral Unificado
+                        </h2>
+                        <p class="text-xs text-slate-400">Reúne todas as provas, entregas e atividades de todas as Partes da Vida</p>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <button onclick="changeMonth(-1)" class="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 text-slate-300">
+                            <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                        </button>
+                        <span id="calendar-month-label" class="text-sm font-bold text-white min-w-[140px] text-center capitalize">Mês Ano</span>
+                        <button onclick="changeMonth(1)" class="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 text-slate-300">
+                            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Legenda das Partes da Vida -->
+                <div id="calendar-legend" class="flex flex-wrap gap-3 text-xs">
+                    <!-- Gerado via JS -->
+                </div>
+
+                <!-- Cabeçalho de Dias da Semana -->
+                <div class="grid grid-cols-7 gap-1.5 text-center text-xs font-semibold text-slate-400 py-1">
+                    <div>Dom</div><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div>
+                </div>
+
+                <!-- Grade do Calendário -->
+                <div id="calendar-grid" class="grid grid-cols-7 gap-1.5">
+                    <!-- Gerado via JS -->
+                </div>
+            </div>
+
+            <!-- Painel Lateral do Dia Selecionado (1/3) -->
+            <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col justify-between space-y-4">
+                <div class="space-y-4">
+                    <div class="border-b border-slate-800 pb-4">
+                        <span class="text-[11px] uppercase tracking-wider font-semibold text-emerald-400">Agenda do Dia</span>
+                        <h3 id="selected-date-title" class="text-lg font-bold text-white mt-0.5">Selecione um dia</h3>
+                    </div>
+
+                    <div id="selected-day-tasks" class="space-y-3 max-h-[380px] overflow-y-auto pr-1">
+                        <!-- Gerado via JS -->
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-slate-800 text-xs text-slate-400 flex items-center justify-between">
+                    <span>Clique em qualquer dia no calendário para filtrar</span>
+                    <button onclick="selectToday()" class="text-emerald-400 hover:underline font-medium">Ir para Hoje</button>
+                </div>
+            </div>
+
+        </section>
+
+    </div>
+
+    <!-- CONTAINER DE POP-UPS FLUTUANTES -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-3 max-w-sm w-full pointer-events-none"></div>
+
+    <!-- MODAL CENTRAL DE ALERTAS (SININHO) -->
+    <div id="alert-modal" class="hidden fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                    <i data-lucide="bell-ring" class="w-5 h-5 text-amber-400"></i>
+                    Atividades Próximas & Atrasadas
+                </h3>
+                <button onclick="toggleAlertModal()" class="text-slate-400 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div id="alert-modal-list" class="space-y-2.5 max-h-96 overflow-y-auto pr-1"></div>
+            <div class="flex justify-end pt-2 border-t border-slate-800">
+                <button onclick="toggleAlertModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-medium">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function getOffsetDateStr(offsetDays) {
+            const d = new Date();
+            d.setDate(d.getDate() + offsetDays);
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
+        }
+
+        const TODAY_STR = getOffsetDateStr(0);
+
+        // Estrutura Padrão das "Partes da Vida"
+        const defaultAreas = [
+            {
+                id: 'faculdade',
+                name: 'Faculdade (Poli)',
+                icon: 'graduation-cap',
+                color: 'indigo',
+                badgeClass: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
+                dotClass: 'bg-indigo-400',
+                sublists: ['Provas', 'Atividades', 'Apresentações', 'Laboratórios']
+            },
+            {
+                id: 'pessoal',
+                name: 'Vida Pessoal',
+                icon: 'user',
+                color: 'emerald',
+                badgeClass: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+                dotClass: 'bg-emerald-400',
+                sublists: ['Compromissos', 'Finanças', 'Casa & Compras', 'Lazer']
+            },
+            {
+                id: 'exercicios',
+                name: 'Exercícios & Saúde',
+                icon: 'dumbbell',
+                color: 'rose',
+                badgeClass: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
+                dotClass: 'bg-rose-400',
+                sublists: ['Treino de Força', 'Cardio / Corrida', 'Consultas & Exames']
+            },
+            {
+                id: 'projetos',
+                name: 'Projetos & Estudos',
+                icon: 'code-2',
+                color: 'amber',
+                badgeClass: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+                dotClass: 'bg-amber-400',
+                sublists: ['Programação C++/Python', 'Simulações & Drones', 'Inglês']
+            }
+        ];
+
+        // Tarefas iniciais demonstrando Sub-tarefas, Barra de Progresso, Prioridades e Links Rápidos
+        const defaultTasks = [
+            {
+                id: 101,
+                areaId: 'faculdade',
+                sublist: 'Provas',
+                title: 'Prova de Sistemas de Controle',
+                priority: 'alta',
+                date: getOffsetDateStr(0),
+                time: '16:00',
+                done: false,
+                link: 'https://scholar.google.com.br',
+                linkLabel: 'Material / Resumo PDF',
+                subtasks: [
+                    { id: 1, text: 'Revisar Lugar das Raízes (Root Locus)', done: true },
+                    { id: 2, text: 'Resolver lista de compensadores avanço-atraso', done: true },
+                    { id: 3, text: 'Simular resposta ao degrau no MATLAB', done: false }
+                ]
+            },
+            {
+                id: 102,
+                areaId: 'faculdade',
+                sublist: 'Laboratórios',
+                title: 'Relatório de Identificação de Sistemas e CLP',
+                priority: 'media',
+                date: getOffsetDateStr(1),
+                time: '10:00',
+                done: false,
+                link: 'https://www.overleaf.com',
+                linkLabel: 'Abrir Projeto LaTeX',
+                subtasks: [
+                    { id: 1, text: 'Coletar dados da planta', done: true },
+                    { id: 2, text: 'Gerar gráficos de Bode e IAE', done: true },
+                    { id: 3, text: 'Exportar PDF final', done: true }
+                ]
+            },
+            {
+                id: 103,
+                areaId: 'projetos',
+                sublist: 'Simulações & Drones',
+                title: 'Testar controle de posição no Webots SITL',
+                priority: 'alta',
+                date: getOffsetDateStr(0),
+                time: '19:30',
+                done: false,
+                link: 'https://github.com',
+                linkLabel: 'Repositório GitHub',
+                subtasks: [
+                    { id: 1, text: 'Ajustar parâmetros do controlador', done: true },
+                    { id: 2, text: 'Validar log de telemetria em Python', done: false }
+                ]
+            },
+            {
+                id: 104,
+                areaId: 'exercicios',
+                sublist: 'Treino de Força',
+                title: 'Treino A + Mobilidade',
+                priority: 'baixa',
+                date: getOffsetDateStr(0),
+                time: '18:00',
+                done: false,
+                link: '',
+                linkLabel: '',
+                subtasks: []
+            }
+        ];
+
+        // Disciplinas iniciais de exemplo para a Calculadora de Notas
+        const defaultSubjects = [
+            {
+                id: 1,
+                name: 'Sistemas de Controle',
+                target: 7.0,
+                assessments: [
+                    { id: 11, name: '1ª Avaliação (Prova 1)', weight: 1, grade: 8.2 },
+                    { id: 12, name: '2ª Avaliação (Prova 2)', weight: 1, grade: null },
+                    { id: 13, name: 'Projeto Prático / MATLAB', weight: 1, grade: 9.0 }
+                ]
+            },
+            {
+                id: 2,
+                name: 'Eletrônica & Automação',
+                target: 7.0,
+                assessments: [
+                    { id: 21, name: '1ª Avaliação', weight: 4, grade: 6.5 },
+                    { id: 22, name: '2ª Avaliação', weight: 4, grade: null },
+                    { id: 23, name: 'Laboratório / Relatórios', weight: 2, grade: 8.5 }
+                ]
+            }
+        ];
+
+        // Carrega dados preservando compatibilidade com a versão anterior
+        let areas = JSON.parse(localStorage.getItem('life_areas_v2')) || defaultAreas;
+        let rawTasks = JSON.parse(localStorage.getItem('life_tasks_v2')) || defaultTasks;
+        let subjects = JSON.parse(localStorage.getItem('life_subjects_v1')) || defaultSubjects;
+
+        // Normaliza tarefas antigas para garantir que tenham subtasks, priority e link
+        let tasks = rawTasks.map(t => ({
+            ...t,
+            priority: t.priority || 'media',
+            link: t.link || '',
+            linkLabel: t.linkLabel || '',
+            subtasks: Array.isArray(t.subtasks) ? t.subtasks : []
+        }));
+
+        let activeAreaId = areas[0].id;
+        let activeSublist = 'Todas';
+        let activePriorityFilter = 'todas';
+        let isFocusMode = false;
+        let expandedSubtasks = new Set(tasks.map(t => t.id)); // Mantém sub-tarefas visíveis por padrão
+        let alertWindowDays = 3;
+        let dismissedToasts = new Set();
+
+        let currentCalDate = new Date();
+        let selectedDateStr = TODAY_STR;
+
+        function saveData() {
+            localStorage.setItem('life_areas_v2', JSON.stringify(areas));
+            localStorage.setItem('life_tasks_v2', JSON.stringify(tasks));
+            localStorage.setItem('life_subjects_v1', JSON.stringify(subjects));
+        }
+
+        function getDaysDiff(dateStr) {
+            const today = new Date(TODAY_STR + 'T00:00:00');
+            const target = new Date(dateStr + 'T00:00:00');
+            return Math.round((target - today) / (1000 * 60 * 60 * 24));
+        }
+
+        function formatDateBR(dateStr) {
+            const [y, m, d] = dateStr.split('-');
+            return `${d}/${m}/${y}`;
+        }
+
+        function scrollToSection(id) {
+            if (isFocusMode) toggleFocusMode();
+            document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Atalho de teclado '/' para focar na Busca Instantânea
+        document.addEventListener('keydown', function(e) {
+            if (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
+                e.preventDefault();
+                document.getElementById('search-input').focus();
+            }
+        });
+
+        // ========================================================
+        // CÁLCULO DE PROGRESSO DAS SUB-TAREFAS (0% a 100%)
+        // ========================================================
+        function getTaskProgress(task) {
+            if (!task.subtasks || task.subtasks.length === 0) {
+                return { total: 0, doneCount: 0, pct: task.done ? 100 : 0 };
+            }
+            const total = task.subtasks.length;
+            const doneCount = task.subtasks.filter(s => s.done).length;
+            const pct = Math.round((doneCount / total) * 100);
+            return { total, doneCount, pct };
+        }
+
+        // ========================================================
+        // VISÃO "MODO FOCO DE HOJE"
+        // ========================================================
+        function toggleFocusMode() {
+            isFocusMode = !isFocusMode;
+            const areasSec = document.getElementById('areas-section');
+            const gradesSec = document.getElementById('grades-section');
+            const calSec = document.getElementById('calendar-section');
+            const areaHeaderBar = document.getElementById('area-header-bar');
+            const banner = document.getElementById('focus-mode-banner');
+            const btn = document.getElementById('btn-focus-mode');
+            const btnText = document.getElementById('focus-mode-text');
+
+            if (isFocusMode) {
+                areasSec.classList.add('hidden');
+                gradesSec.classList.add('hidden');
+                calSec.classList.add('hidden');
+                areaHeaderBar.classList.add('hidden');
+                banner.classList.remove('hidden');
+                btn.className = "px-4 py-2 text-xs font-bold bg-amber-500 text-slate-950 rounded-xl transition flex items-center gap-2 shadow-lg shadow-amber-500/30";
+                btnText.textContent = "Sair do Modo Foco";
+            } else {
+                areasSec.classList.remove('hidden');
+                gradesSec.classList.remove('hidden');
+                calSec.classList.remove('hidden');
+                areaHeaderBar.classList.remove('hidden');
+                banner.classList.add('hidden');
+                btn.className = "px-4 py-2 text-xs font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 rounded-xl transition flex items-center gap-2";
+                btnText.textContent = "Modo Foco de Hoje";
+            }
+            renderAll();
+        }
+
+        // ========================================================
+        // 1. RENDERIZAÇÃO DAS "PARTES DA VIDA"
+        // ========================================================
+        function renderAreas() {
+            const grid = document.getElementById('life-areas-grid');
+            grid.innerHTML = areas.map(area => {
+                const isSelected = area.id === activeAreaId;
+                const areaTasks = tasks.filter(t => t.areaId === area.id && !t.done);
+                const urgentCount = areaTasks.filter(t => getDaysDiff(t.date) <= alertWindowDays).length;
+
+                return `
+                    <div onclick="selectArea('${area.id}')" class="cursor-pointer p-5 rounded-2xl border transition-all ${
+                        isSelected 
+                        ? 'bg-slate-800/90 border-indigo-500 shadow-lg shadow-indigo-500/10 scale-[1.01]' 
+                        : 'bg-slate-900/60 border-slate-800 hover:border-slate-700'
+                    }">
+                        <div class="flex items-center justify-between">
+                            <div class="p-2.5 rounded-xl border ${area.badgeClass}">
+                                <i data-lucide="${area.icon}" class="w-5 h-5"></i>
+                            </div>
+                            ${urgentCount > 0 ? `
+                                <span class="px-2 py-0.5 text-[11px] font-semibold rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 flex items-center gap-1">
+                                    <i data-lucide="alert-circle" class="w-3 h-3"></i> ${urgentCount} próx.
+                                </span>
+                            ` : `<span class="text-xs text-slate-500">${areaTasks.length} pendentes</span>`}
+                        </div>
+                        <h3 class="text-base font-bold text-white mt-3">${area.name}</h3>
+                        <p class="text-xs text-slate-400 mt-1 truncate">${area.sublists.join(' • ')}</p>
+                    </div>
+                `;
+            }).join('');
+            lucide.createIcons();
+        }
+
+        function selectArea(areaId) {
+            activeAreaId = areaId;
+            activeSublist = 'Todas';
+            renderAll();
+        }
+
+        function openNewAreaModal() {
+            const name = prompt('Nome da nova Parte da Vida (ex: Idiomas, Estágio, Competição):');
+            if (!name || !name.trim()) return;
+            const sublistsRaw = prompt('Digite as sub-listas separadas por vírgula:', 'Geral, Projetos, Entregas');
+            const sublists = sublistsRaw ? sublistsRaw.split(',').map(s => s.trim()).filter(Boolean) : ['Geral'];
+
+            const newArea = {
+                id: 'area_' + Date.now(),
+                name: name.trim(),
+                icon: 'star',
+                color: 'cyan',
+                badgeClass: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
+                dotClass: 'bg-cyan-400',
+                sublists: sublists
+            };
+            areas.push(newArea);
+            activeAreaId = newArea.id;
+            saveData();
+            renderAll();
+        }
+
+        // ========================================================
+        // 2. BUSCA INSTANTÂNEA, FILTRO DE PRIORIDADE E SUB-TAREFAS
+        // ========================================================
+        function setPriorityFilter(prio) {
+            activePriorityFilter = prio;
+            ['todas', 'alta', 'media', 'baixa'].forEach(p => {
+                const btn = document.getElementById(`prio-btn-${p}`);
+                if (p === prio) {
+                    btn.className = "px-2.5 py-1.5 rounded-lg text-xs font-bold bg-indigo-500 text-white transition shadow";
+                } else {
+                    const colors = { todas: 'text-slate-300', alta: 'text-rose-300', media: 'text-amber-300', baixa: 'text-sky-300' };
+                    btn.className = `px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-800 ${colors[p]} hover:bg-slate-700 border border-slate-700 transition`;
+                }
+            });
+            renderActiveAreaDetails();
+        }
+
+        function handleSearchAndFilter() {
+            const q = document.getElementById('search-input').value;
+            const clearBtn = document.getElementById('clear-search-btn');
+            if (q.length > 0) clearBtn.classList.remove('hidden');
+            else clearBtn.classList.add('hidden');
+            renderActiveAreaDetails();
+        }
+
+        function clearSearch() {
+            document.getElementById('search-input').value = '';
+            handleSearchAndFilter();
+        }
+
+        function getPriorityBadge(priority) {
+            if (priority === 'alta') {
+                return `<span class="px-2 py-0.5 text-[10px] font-bold rounded-md bg-rose-500/20 text-rose-300 border border-rose-500/30">🔴 Alta</span>`;
+            }
+            if (priority === 'baixa') {
+                return `<span class="px-2 py-0.5 text-[10px] font-semibold rounded-md bg-sky-500/15 text-sky-300 border border-sky-500/30">🔵 Baixa</span>`;
+            }
+            return `<span class="px-2 py-0.5 text-[10px] font-semibold rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/30">🟡 Média</span>`;
+        }
+
+        function renderActiveAreaDetails() {
+            const area = areas.find(a => a.id === activeAreaId) || areas[0];
+
+            document.getElementById('active-area-title').textContent = area.name;
+            document.getElementById('active-area-icon').className = `p-3 rounded-xl border ${area.badgeClass}`;
+            document.getElementById('active-area-icon').innerHTML = `<i data-lucide="${area.icon}" class="w-6 h-6"></i>`;
+
+            // Abas de sub-listas
+            const tabsContainer = document.getElementById('sublists-tabs');
+            const allTabs = ['Todas', ...area.sublists];
+            tabsContainer.innerHTML = allTabs.map(sub => `
+                <button onclick="selectSublist('${sub}')" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold transition ${
+                    activeSublist === sub 
+                    ? 'bg-indigo-500 text-white shadow' 
+                    : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'
+                }">
+                    ${sub}
+                </button>
+            `).join('') + `
+                <button onclick="addNewSublist()" class="px-2.5 py-1.5 rounded-xl text-xs font-medium bg-slate-800/60 hover:bg-slate-800 text-indigo-400 border border-dashed border-slate-700 flex items-center gap-1">
+                    <i data-lucide="plus" class="w-3.5 h-3.5"></i> Lista
+                </button>
+            `;
+
+            // Preenche select de sub-lista do formulário
+            const selectEl = document.getElementById('task-sublist');
+            const currentVal = selectEl.value;
+            selectEl.innerHTML = area.sublists.map(sub => `<option value="${sub}">${sub}</option>`).join('');
+            if (activeSublist !== 'Todas') selectEl.value = activeSublist;
+            else if (area.sublists.includes(currentVal)) selectEl.value = currentVal;
+
+            // 1. Filtra por Modo Foco ou Área Atual
+            let filtered = [];
+            if (isFocusMode) {
+                filtered = tasks.filter(t => getDaysDiff(t.date) <= 0);
+                const pendingToday = filtered.filter(t => !t.done).length;
+                document.getElementById('focus-stats-count').textContent = `${pendingToday} ${pendingToday === 1 ? 'meta pendente' : 'metas pendentes'}`;
+            } else {
+                filtered = tasks.filter(t => t.areaId === activeAreaId);
+                if (activeSublist !== 'Todas') {
+                    filtered = filtered.filter(t => t.sublist === activeSublist);
+                }
+            }
+
+            // 2. Filtra por Prioridade
+            if (activePriorityFilter !== 'todas') {
+                filtered = filtered.filter(t => (t.priority || 'media') === activePriorityFilter);
+            }
+
+            // 3. Filtra por Busca Instantânea
+            const searchQuery = document.getElementById('search-input').value.trim().toLowerCase();
+            if (searchQuery) {
+                filtered = filtered.filter(t => {
+                    const matchTitle = t.title.toLowerCase().includes(searchQuery);
+                    const matchSublist = t.sublist.toLowerCase().includes(searchQuery);
+                    const matchSubtasks = (t.subtasks || []).some(st => st.text.toLowerCase().includes(searchQuery));
+                    return matchTitle || matchSublist || matchSubtasks;
+                });
+            }
+
+            // 4. Ordenação
+            const sortMode = document.getElementById('sort-select').value;
+            const prioWeight = { alta: 3, media: 2, baixa: 1 };
+            filtered.sort((a, b) => {
+                if (a.done !== b.done) return a.done ? 1 : -1; // Não concluídas primeiro
+                if (sortMode === 'priority') {
+                    return (prioWeight[b.priority] || 2) - (prioWeight[a.priority] || 2);
+                }
+                if (sortMode === 'progress') {
+                    return getTaskProgress(b).pct - getTaskProgress(a).pct;
+                }
+                return a.date.localeCompare(b.date);
+            });
+
+            const listContainer = document.getElementById('tasks-list');
+            if (filtered.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="text-center py-10 text-slate-500 text-sm border border-dashed border-slate-800 rounded-xl">
+                        ${isFocusMode ? '🎉 Nenhuma tarefa pendente ou atrasada para hoje!' : 'Nenhuma atividade encontrada com os filtros atuais.'}
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            listContainer.innerHTML = filtered.map(task => {
+                const taskArea = areas.find(a => a.id === task.areaId) || area;
+                const diff = getDaysDiff(task.date);
+                const progress = getTaskProgress(task);
+                const isExpanded = expandedSubtasks.has(task.id);
+
+                let urgencyBadge = '';
+                if (!task.done) {
+                    if (diff < 0) urgencyBadge = `<span class="px-2 py-0.5 text-[10px] font-bold rounded bg-rose-500/20 text-rose-400 border border-rose-500/30">ATRASADA (${Math.abs(diff)}d)</span>`;
+                    else if (diff === 0) urgencyBadge = `<span class="px-2 py-0.5 text-[10px] font-bold rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">É HOJE às ${task.time}</span>`;
+                    else if (diff === 1) urgencyBadge = `<span class="px-2 py-0.5 text-[10px] font-bold rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">AMANHÃ às ${task.time}</span>`;
+                    else if (diff <= alertWindowDays) urgencyBadge = `<span class="px-2 py-0.5 text-[10px] font-semibold rounded bg-indigo-500/20 text-indigo-300">Faltam ${diff} dias</span>`;
+                }
+
+                // Aviso especial quando as sub-tarefas chegam a 100%, mas a tarefa principal ainda não foi concluída manualmente
+                const readyToCompleteBadge = (progress.total > 0 && progress.pct === 100 && !task.done)
+                    ? `<span class="px-2 py-0.5 text-[10px] font-bold rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1">
+                        <i data-lucide="sparkles" class="w-3 h-3"></i> 100% das etapas prontas (Clique no check para concluir)
+                       </span>`
+                    : '';
+
+                return `
+                    <div class="p-4 rounded-xl bg-slate-950/60 hover:bg-slate-950/90 border ${progress.pct === 100 && !task.done ? 'border-emerald-500/50' : 'border-slate-800/90'} transition space-y-3">
+                        
+                        <!-- Linha Principal da Tarefa -->
+                        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                            <div class="flex items-start gap-3">
+                                <!-- Botão Manual de Concluir Tarefa Principal -->
+                                <button onclick="toggleTaskDone(${task.id})" title="Concluir tarefa principal manualmente" class="mt-0.5 w-6 h-6 rounded-lg border-2 flex items-center justify-center transition shrink-0 ${
+                                    task.done 
+                                    ? 'bg-emerald-500 border-emerald-400 text-slate-950 shadow-md shadow-emerald-500/20' 
+                                    : (progress.pct === 100 && progress.total > 0 ? 'border-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/30 animate-pulse' : 'border-slate-600 hover:border-indigo-400')
+                                }">
+                                    ${task.done ? '<i data-lucide="check" class="w-4 h-4 stroke-[3]"></i>' : ''}
+                                </button>
+
+                                <div class="space-y-1">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <span class="text-sm font-bold ${task.done ? 'line-through text-slate-500' : 'text-white'}">${task.title}</span>
+                                        ${isFocusMode ? `<span class="px-2 py-0.5 text-[10px] font-semibold rounded border ${taskArea.badgeClass}">${taskArea.name}</span>` : ''}
+                                        <span class="px-2 py-0.5 text-[10px] rounded-md bg-slate-800 text-slate-300 border border-slate-700">${task.sublist}</span>
+                                        ${getPriorityBadge(task.priority)}
+                                        ${urgencyBadge}
+                                        ${readyToCompleteBadge}
+                                    </div>
+
+                                    <div class="text-xs text-slate-400 flex flex-wrap items-center gap-3 pt-0.5">
+                                        <span class="flex items-center gap-1"><i data-lucide="calendar" class="w-3.5 h-3.5"></i> ${formatDateBR(task.date)}</span>
+                                        <span class="flex items-center gap-1"><i data-lucide="clock" class="w-3.5 h-3.5"></i> ${task.time}</span>
+                                        
+                                        <!-- Botão de Alternar Sub-tarefas -->
+                                        <button onclick="toggleExpandSubtasks(${task.id})" class="text-indigo-400 hover:text-indigo-300 font-medium flex items-center gap-1">
+                                            <i data-lucide="list-checks" class="w-3.5 h-3.5"></i>
+                                            <span>${progress.doneCount}/${progress.total} etapas (${progress.pct}%)</span>
+                                            <i data-lucide="${isExpanded ? 'chevron-up' : 'chevron-down'}" class="w-3.5 h-3.5"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Ações Direita: Botão de Link Rápido + Editar Link + Excluir -->
+                            <div class="flex flex-wrap items-center gap-2 self-end lg:self-center">
+                                ${task.link ? `
+                                    <a href="${task.link}" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 flex items-center gap-1.5 transition">
+                                        <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                                        <span>${task.linkLabel || 'Abrir Link Rápido'}</span>
+                                    </a>
+                                ` : `
+                                    <button onclick="promptAddLink(${task.id})" class="px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-cyan-300 border border-slate-800 transition flex items-center gap-1" title="Anexar link rápido a esta tarefa">
+                                        <i data-lucide="link" class="w-3 h-3"></i> + Link
+                                    </button>
+                                `}
+
+                                <button onclick="deleteTask(${task.id})" class="text-slate-500 hover:text-rose-400 p-1.5 rounded-lg transition" title="Remover atividade">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- BARRA DE PROGRESSO VISUAL DAS SUB-TAREFAS -->
+                        ${progress.total > 0 ? `
+                            <div class="space-y-1 pt-1">
+                                <div class="flex justify-between text-[11px]">
+                                    <span class="text-slate-400">Progresso das etapas</span>
+                                    <span class="font-bold ${progress.pct === 100 ? 'text-emerald-400' : 'text-indigo-400'}">${progress.pct}%</span>
+                                </div>
+                                <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                                    <div class="h-full rounded-full transition-all duration-300 ${progress.pct === 100 ? 'bg-gradient-to-r from-emerald-500 to-cyan-400' : 'bg-indigo-500'}" style="width: ${progress.pct}%"></div>
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        <!-- PAINEL INTERNO DE SUB-TAREFAS (CHECKLIST) -->
+                        ${isExpanded ? `
+                            <div class="pt-2 pl-2 sm:pl-8 border-t border-slate-800/70 space-y-2">
+                                <div class="space-y-1.5">
+                                    ${(task.subtasks || []).map(st => `
+                                        <div class="flex items-center justify-between gap-2 bg-slate-900/70 px-3 py-1.5 rounded-lg border border-slate-800/80">
+                                            <label class="flex items-center gap-2.5 text-xs cursor-pointer flex-1">
+                                                <input type="checkbox" ${st.done ? 'checked' : ''} onchange="toggleSubtask(${task.id}, ${st.id})" class="rounded border-slate-600 text-emerald-500 focus:ring-0 cursor-pointer">
+                                                <span class="${st.done ? 'line-through text-slate-500' : 'text-slate-200'}">${st.text}</span>
+                                            </label>
+                                            <button onclick="deleteSubtask(${task.id}, ${st.id})" class="text-slate-600 hover:text-rose-400">
+                                                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                                            </button>
+                                        </div>
+                                    `).join('')}
+                                </div>
+
+                                <!-- Input rápido para adicionar nova sub-tarefa -->
+                                <div class="flex items-center gap-2">
+                                    <input 
+                                        type="text" 
+                                        id="subtask-input-${task.id}" 
+                                        onkeydown="if(event.key==='Enter'){event.preventDefault(); addSubtask(${task.id});}"
+                                        placeholder="Adicionar nova etapa (ex: Revisar cálculos, Fazer slides)..." 
+                                        class="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                                    >
+                                    <button onclick="addSubtask(${task.id})" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-indigo-300 rounded-lg text-xs font-semibold transition flex items-center gap-1">
+                                        <i data-lucide="plus" class="w-3.5 h-3.5"></i> Etapa
+                                    </button>
+                                </div>
+                            </div>
+                        ` : ''}
+
+                    </div>
+                `;
+            }).join('');
+
+            lucide.createIcons();
+        }
+
+        // Funções de Sub-tarefas (atualizam a % sem auto-concluir a tarefa pai)
+        function toggleExpandSubtasks(taskId) {
+            if (expandedSubtasks.has(taskId)) expandedSubtasks.delete(taskId);
+            else expandedSubtasks.add(taskId);
+            renderActiveAreaDetails();
+        }
+
+        function addSubtask(taskId) {
+            const input = document.getElementById(`subtask-input-${taskId}`);
+            const text = input.value.trim();
+            if (!text) return;
+            const task = tasks.find(t => t.id === taskId);
+            if (task) {
+                if (!task.subtasks) task.subtasks = [];
+                task.subtasks.push({ id: Date.now(), text, done: false });
+                expandedSubtasks.add(taskId);
+                saveData();
+                renderActiveAreaDetails();
+            }
+        }
+
+        function toggleSubtask(taskId, subtaskId) {
+            const task = tasks.find(t => t.id === taskId);
+            if (task && task.subtasks) {
+                const st = task.subtasks.find(s => s.id === subtaskId);
+                if (st) {
+                    st.done = !st.done;
+                    // Importante: NÃO altera task.done automaticamente! O usuário decide quando concluir a tarefa principal.
+                    saveData();
+                    renderActiveAreaDetails();
+                }
+            }
+        }
+
+        function deleteSubtask(taskId, subtaskId) {
+            const task = tasks.find(t => t.id === taskId);
+            if (task && task.subtasks) {
+                task.subtasks = task.subtasks.filter(s => s.id !== subtaskId);
+                saveData();
+                renderActiveAreaDetails();
+            }
+        }
+
+        function promptAddLink(taskId) {
+            const task = tasks.find(t => t.id === taskId);
+            if (!task) return;
+            const url = prompt('Cole a URL do Link Rápido (ex: https://drive.google.com/...):', task.link || 'https://');
+            if (url === null) return;
+            const label = prompt('Nome do botão (ex: Abrir Pasta do Drive, Ver Código):', task.linkLabel || 'Abrir Link Rápido');
+            task.link = url.trim();
+            task.linkLabel = label ? label.trim() : 'Abrir Link Rápido';
+            saveData();
+            renderAll();
+        }
+
+        function selectSublist(sub) {
+            activeSublist = sub;
+            renderActiveAreaDetails();
+        }
+
+        function addNewSublist() {
+            const area = areas.find(a => a.id === activeAreaId);
+            const name = prompt(`Nova sub-lista dentro de "${area.name}":`);
+            if (name && name.trim()) {
+                area.sublists.push(name.trim());
+                activeSublist = name.trim();
+                saveData();
+                renderAll();
+            }
+        }
+
+        // Cadastro de nova tarefa pelo formulário
+        document.getElementById('add-task-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const title = document.getElementById('task-title').value.trim();
+            const sublist = document.getElementById('task-sublist').value;
+            const priority = document.getElementById('task-priority').value;
+            const date = document.getElementById('task-date').value;
+            const time = document.getElementById('task-time').value || '12:00';
+            const link = document.getElementById('task-link').value.trim();
+            const linkLabel = document.getElementById('task-link-label').value.trim();
+            const initialSubtasksRaw = document.getElementById('task-initial-subtasks').value.trim();
+
+            const subtasks = initialSubtasksRaw
+                ? initialSubtasksRaw.split(',').map((s, idx) => ({ id: Date.now() + idx, text: s.trim(), done: false })).filter(s => s.text)
+                : [];
+
+            if (title && date) {
+                const newTask = {
+                    id: Date.now(),
+                    areaId: activeAreaId,
+                    sublist,
+                    title,
+                    priority,
+                    date,
+                    time,
+                    done: false,
+                    link,
+                    linkLabel: linkLabel || 'Abrir Link Rápido',
+                    subtasks
+                };
+                tasks.push(newTask);
+                if (subtasks.length > 0) expandedSubtasks.add(newTask.id);
+
+                document.getElementById('task-title').value = '';
+                document.getElementById('task-link').value = '';
+                document.getElementById('task-link-label').value = '';
+                document.getElementById('task-initial-subtasks').value = '';
+
+                selectedDateStr = date;
+                saveData();
+                renderAll();
+
+                if (getDaysDiff(date) <= alertWindowDays) {
+                    showSingleToast(newTask);
+                }
+            }
+        });
+
+        function toggleTaskDone(taskId) {
+            const task = tasks.find(t => t.id === taskId);
+            if (task) {
+                task.done = !task.done;
+                saveData();
+                renderAll();
+                removeToastElement(taskId);
+            }
+        }
+
+        function deleteTask(taskId) {
+            tasks = tasks.filter(t => t.id !== taskId);
+            saveData();
+            renderAll();
+            removeToastElement(taskId);
+        }
+
+        // ========================================================
+        // 3. CALCULADORA DE NOTAS E PESOS POR DISCIPLINA
+        // ========================================================
+        function calculateSubjectMetrics(subject) {
+            let totalWeight = 0;
+            let completedWeight = 0;
+            let weightedSum = 0;
+
+            subject.assessments.forEach(a => {
+                const w = parseFloat(a.weight) || 1;
+                totalWeight += w;
+                if (a.grade !== null && a.grade !== '' && !isNaN(a.grade)) {
+                    completedWeight += w;
+                    weightedSum += parseFloat(a.grade) * w;
+                }
+            });
+
+            const currentAverage = completedWeight > 0 ? (weightedSum / completedWeight) : 0;
+            const remainingWeight = totalWeight - completedWeight;
+            const totalPointsNeeded = subject.target * totalWeight;
+            const pointsStillNeeded = totalPointsNeeded - weightedSum;
+
+            let neededAverageOnRemaining = 0;
+            if (remainingWeight > 0) {
+                neededAverageOnRemaining = pointsStillNeeded / remainingWeight;
+            }
+
+            const finalAverageIfDone = totalWeight > 0 ? (weightedSum / totalWeight) : 0;
+
+            return {
+                totalWeight,
+                completedWeight,
+                remainingWeight,
+                currentAverage,
+                neededAverageOnRemaining,
+                finalAverageIfDone
+            };
+        }
+
+        function renderGradesCalculator() {
+            const container = document.getElementById('subjects-grid');
+            if (subjects.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-2 text-center py-8 text-slate-500 text-sm border border-dashed border-slate-800 rounded-xl">
+                        Nenhuma disciplina cadastrada. Adicione suas matérias acima para simular notas e pesos!
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = subjects.map(sub => {
+                const m = calculateSubjectMetrics(sub);
+                let statusBanner = '';
+
+                if (m.totalWeight === 0) {
+                    statusBanner = `<span class="text-xs text-slate-400">Adicione avaliações abaixo</span>`;
+                } else if (m.remainingWeight === 0) {
+                    if (m.finalAverageIfDone >= sub.target) {
+                        statusBanner = `<span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">✅ Aprovado! Média Final: ${m.finalAverageIfDone.toFixed(2)}</span>`;
+                    } else {
+                        statusBanner = `<span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">⚠️ Abaixo da meta (${m.finalAverageIfDone.toFixed(2)} / ${sub.target.toFixed(1)})</span>`;
+                    }
+                } else {
+                    if (m.neededAverageOnRemaining <= 0) {
+                        statusBanner = `<span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">🎉 Já atingiu a pontuação para média ${sub.target.toFixed(1)}!</span>`;
+                    } else if (m.neededAverageOnRemaining > 10) {
+                        statusBanner = `<span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">⚠️ Precisa de ${m.neededAverageOnRemaining.toFixed(2)} nas restantes (Provas Finais)</span>`;
+                    } else {
+                        statusBanner = `<span class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30">🎯 Precisa de <strong>${m.neededAverageOnRemaining.toFixed(2)}</strong> nas avaliações em aberto</span>`;
+                    }
+                }
+
+                return `
+                    <div class="bg-slate-950/60 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between space-y-4">
+                        <div class="space-y-3">
+                            <div class="flex items-start justify-between gap-2 border-b border-slate-800 pb-3">
+                                <div>
+                                    <h3 class="text-base font-bold text-white">${sub.name}</h3>
+                                    <span class="text-xs text-slate-400">Meta de aprovação: <strong>${sub.target.toFixed(1)}</strong> • Média parcial: <strong class="text-cyan-400">${m.currentAverage.toFixed(2)}</strong></span>
+                                </div>
+                                <button onclick="deleteSubject(${sub.id})" class="text-slate-500 hover:text-rose-400 p-1" title="Remover disciplina">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+
+                            <div>${statusBanner}</div>
+
+                            <!-- Lista de Avaliações da Disciplina -->
+                            <div class="space-y-2 pt-1">
+                                <div class="grid grid-cols-12 gap-2 text-[10px] font-bold uppercase text-slate-500 px-2">
+                                    <div class="col-span-6">Avaliação</div>
+                                    <div class="col-span-2 text-center">Peso</div>
+                                    <div class="col-span-3 text-center">Nota (0-10)</div>
+                                    <div class="col-span-1"></div>
+                                </div>
+
+                                ${sub.assessments.map(a => `
+                                    <div class="grid grid-cols-12 gap-2 items-center bg-slate-900/80 p-2 rounded-xl border border-slate-800/80 text-xs">
+                                        <div class="col-span-6 font-medium text-slate-200 truncate" title="${a.name}">${a.name}</div>
+                                        <div class="col-span-2">
+                                            <input type="number" step="0.5" min="0.1" value="${a.weight}" onchange="updateAssessment(${sub.id},${a.id}, 'weight', this.value)" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-center text-white focus:outline-none focus:border-indigo-500">
+                                        </div>
+                                        <div class="col-span-3">
+                                            <input type="number" step="0.1" min="0" max="10" placeholder="Em aberto" value="${a.grade !== null ? a.grade : ''}" onchange="updateAssessment(${sub.id},${a.id}, 'grade', this.value)" class="w-full bg-slate-950 border ${a.grade !== null && a.grade !== '' ? 'border-emerald-500/50 text-emerald-300 font-bold' : 'border-slate-700 text-white'} rounded-lg px-2 py-1 text-center focus:outline-none focus:border-indigo-500">
+                                        </div>
+                                        <div class="col-span-1 text-right">
+                                            <button onclick="deleteAssessment(${sub.id},${a.id})" class="text-slate-600 hover:text-rose-400">
+                                                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        <!-- Adicionar nova avaliação na disciplina -->
+                        <div class="flex items-center gap-2 pt-3 border-t border-slate-800/80">
+                            <input type="text" id="assess-name-${sub.id}" placeholder="Nova nota (ex: 3ª VA, Lab)..." class="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500">
+                            <input type="number" id="assess-weight-${sub.id}" placeholder="Peso" value="1" step="0.5" min="0.1" class="w-16 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-center text-white focus:outline-none">
+                            <button onclick="addAssessment(${sub.id})" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-indigo-300 rounded-lg text-xs font-semibold transition flex items-center gap-1">
+                                <i data-lucide="plus" class="w-3.5 h-3.5"></i> Nota
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            lucide.createIcons();
+        }
+
+        document.getElementById('add-subject-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const name = document.getElementById('subject-name').value.trim();
+            const target = parseFloat(document.getElementById('subject-target').value) || 7.0;
+            if (!name) return;
+
+            subjects.push({
+                id: Date.now(),
+                name,
+                target,
+                assessments: [
+                    { id: Date.now() + 1, name: '1ª Avaliação', weight: 1, grade: null },
+                    { id: Date.now() + 2, name: '2ª Avaliação', weight: 1, grade: null }
+                ]
+            });
+            document.getElementById('subject-name').value = '';
+            saveData();
+            renderGradesCalculator();
+        });
+
+        function updateAssessment(subjectId, assessId, field, value) {
+            const sub = subjects.find(s => s.id === subjectId);
+            if (!sub) return;
+            const assess = sub.assessments.find(a => a.id === assessId);
+            if (!assess) return;
+
+            if (field === 'weight') {
+                assess.weight = parseFloat(value) || 1;
+            } else if (field === 'grade') {
+                assess.grade = value === '' ? null : parseFloat(value);
+            }
+            saveData();
+            renderGradesCalculator();
+        }
+
+        function addAssessment(subjectId) {
+            const sub = subjects.find(s => s.id === subjectId);
+            if (!sub) return;
+            const nameInput = document.getElementById(`assess-name-${subjectId}`);
+            const weightInput = document.getElementById(`assess-weight-${subjectId}`);
+            const name = nameInput.value.trim();
+            if (!name) return;
+
+            sub.assessments.push({
+                id: Date.now(),
+                name,
+                weight: parseFloat(weightInput.value) || 1,
+                grade: null
+            });
+            saveData();
+            renderGradesCalculator();
+        }
+
+        function deleteAssessment(subjectId, assessId) {
+            const sub = subjects.find(s => s.id === subjectId);
+            if (sub) {
+                sub.assessments = sub.assessments.filter(a => a.id !== assessId);
+                saveData();
+                renderGradesCalculator();
+            }
+        }
+
+        function deleteSubject(subjectId) {
+            subjects = subjects.filter(s => s.id !== subjectId);
+            saveData();
+            renderGradesCalculator();
+        }
+
+        // ========================================================
+        // 4. POP-UPS E NOTIFICAÇÕES DE PROXIMIDADE
+        // ========================================================
+        function getUpcomingTasks() {
+            return tasks
+                .filter(t => !t.done && getDaysDiff(t.date) <= alertWindowDays)
+                .sort((a, b) => a.date.localeCompare(b.date));
+        }
+
+        function updateUrgentBadge() {
+            const upcoming = getUpcomingTasks();
+            const badge = document.getElementById('urgent-badge');
+            if (upcoming.length > 0) {
+                badge.textContent = upcoming.length;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        function changeAlertWindow(days) {
+            alertWindowDays = parseInt(days, 10);
+            dismissedToasts.clear();
+            renderAll();
+            triggerPopups(true);
+        }
+
+        function triggerPopups(forceShow = false) {
+            if (forceShow) dismissedToasts.clear();
+            const upcoming = getUpcomingTasks();
+            const container = document.getElementById('toast-container');
+            container.innerHTML = '';
+
+            upcoming.slice(0, 3).forEach(task => {
+                if (!dismissedToasts.has(task.id)) {
+                    showSingleToast(task);
+                }
+            });
+        }
+
+        function showSingleToast(task) {
+            const container = document.getElementById('toast-container');
+            const area = areas.find(a => a.id === task.areaId) || areas[0];
+            const diff = getDaysDiff(task.date);
+            const progress = getTaskProgress(task);
+
+            let statusLabel = diff < 0 ? `ATRASADA HÁ ${Math.abs(diff)}D` : (diff === 0 ? `HOJE ÀS ${task.time}` : (diff === 1 ? `AMANHÃ ÀS ${task.time}` : `FALTAM ${diff} DIAS`));
+            let borderClass = diff <= 0 ? 'border-amber-500/80' : 'border-indigo-500/70';
+
+            const toastEl = document.createElement('div');
+            toastEl.id = `toast-${task.id}`;
+            toastEl.className = `toast-enter pointer-events-auto bg-slate-900/95 backdrop-blur-md border-l-4 ${borderClass} border border-slate-700 p-4 rounded-xl shadow-2xl space-y-2`;
+            toastEl.innerHTML = `
+                <div class="flex items-start justify-between gap-2">
+                    <div class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-400">
+                        <i data-lucide="bell-ring" class="w-3.5 h-3.5"></i>
+                        <span>${statusLabel}</span>
+                    </div>
+                    <button onclick="dismissToast(${task.id})" class="text-slate-400 hover:text-white">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                <div>
+                    <h4 class="text-sm font-bold text-white">${task.title}</h4>
+                    <p class="text-xs text-slate-400 mt-0.5">${area.name} • ${task.sublist} ${progress.total > 0 ? `• ${progress.pct}% etapas` : ''}</p>
+                </div>
+                <div class="flex items-center justify-between gap-2 pt-1">
+                    ${task.link ? `<a href="${task.link}" target="_blank" class="text-[11px] text-cyan-400 hover:underline flex items-center gap-1"><i data-lucide="external-link" class="w-3 h-3"></i> ${task.linkLabel || 'Link'}</a>` : '<span></span>'}
+                    <button onclick="toggleTaskDone(${task.id})" class="px-2.5 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 rounded-lg text-[11px] font-semibold transition flex items-center gap-1">
+                        <i data-lucide="check" class="w-3 h-3"></i> Concluir
+                    </button>
+                </div>
+            `;
+            container.appendChild(toastEl);
+            lucide.createIcons();
+        }
+
+        function dismissToast(taskId) {
+            dismissedToasts.add(taskId);
+            removeToastElement(taskId);
+        }
+
+        function removeToastElement(taskId) {
+            const el = document.getElementById(`toast-${taskId}`);
+            if (el) el.remove();
+        }
+
+        function requestWindowsNotification() {
+            if (!("Notification" in window)) {
+                alert("Seu navegador não suporta notificações nativas.");
+                return;
+            }
+            Notification.requestPermission().then(permission => {
+                if (permission === "granted") {
+                    document.getElementById('win-notify-text').textContent = "Windows Ativo";
+                    new Notification("Alertas Ativados!", { body: "Você receberá avisos das suas tarefas próximas." });
+                }
+            });
+        }
+
+        function toggleAlertModal() {
+            const modal = document.getElementById('alert-modal');
+            modal.classList.toggle('hidden');
+            if (!modal.classList.contains('hidden')) {
+                const upcoming = getUpcomingTasks();
+                const listEl = document.getElementById('alert-modal-list');
+                if (upcoming.length === 0) {
+                    listEl.innerHTML = `<p class="text-sm text-slate-400 text-center py-6">Nenhuma atividade pendente para os próximos ${alertWindowDays} dias.</p>`;
+                } else {
+                    listEl.innerHTML = upcoming.map(t => {
+                        const area = areas.find(a => a.id === t.areaId) || areas[0];
+                        return `
+                            <div class="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-800">
+                                <div>
+                                    <span class="text-xs font-semibold text-indigo-400">${area.name} • ${t.sublist}</span>
+                                    <h4 class="text-sm font-bold text-white">${t.title}</h4>
+                                    <span class="text-xs text-slate-400">${formatDateBR(t.date)} às ${t.time}</span>
+                                </div>
+                                <button onclick="toggleTaskDone(${t.id}); toggleAlertModal();" class="px-3 py-1.5 bg-emerald-500/20 text-emerald-300 rounded-lg text-xs font-semibold">
+                                    Concluir
+                                </button>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            }
+        }
+
+        // ========================================================
+        // 5. CALENDÁRIO MENSAL UNIFICADO
+        // ========================================================
+        function renderCalendar() {
+            const year = currentCalDate.getFullYear();
+            const month = currentCalDate.getMonth();
+
+            const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+            document.getElementById('calendar-month-label').textContent = `${monthNames[month]} ${year}`;
+
+            document.getElementById('calendar-legend').innerHTML = areas.map(a => `
+                <div class="flex items-center gap-1.5 text-slate-300">
+                    <span class="w-2.5 h-2.5 rounded-full ${a.dotClass}"></span>
+                    <span>${a.name}</span>
+                </div>
+            `).join('');
+
+            const firstDayIndex = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            const grid = document.getElementById('calendar-grid');
+            let cellsHtml = '';
+
+            for (let i = 0; i < firstDayIndex; i++) {
+                cellsHtml += `<div class="h-20 rounded-xl bg-slate-950/20 border border-slate-800/30"></div>`;
+            }
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const dayTasks = tasks.filter(t => t.date === dateStr);
+                const isToday = dateStr === TODAY_STR;
+                const isSelected = dateStr === selectedDateStr;
+
+                const dotsHtml = dayTasks.slice(0, 3).map(t => {
+                    const area = areas.find(a => a.id === t.areaId) || areas[0];
+                    return `
+                        <div class="text-[10px] truncate px-1.5 py-0.5 rounded ${area.badgeClass} ${t.done ? 'line-through opacity-50' : ''}">
+                            ${t.title}
+                        </div>
+                    `;
+                }).join('');
+
+                cellsHtml += `
+                    <div onclick="selectCalendarDate('${dateStr}')" class="h-24 p-1.5 rounded-xl border cursor-pointer transition flex flex-col justify-between overflow-hidden ${
+                        isSelected 
+                        ? 'bg-slate-800/90 border-emerald-400 shadow-md' 
+                        : (isToday ? 'bg-slate-900 border-indigo-500/60' : 'bg-slate-950/50 border-slate-800/80 hover:border-slate-700')
+                    }">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold ${isToday ? 'bg-indigo-500 text-white px-1.5 py-0.5 rounded-md' : 'text-slate-300'}">${day}</span>
+                            ${dayTasks.length > 3 ? `<span class="text-[10px] text-slate-400">+${dayTasks.length - 3}</span>` : ''}
+                        </div>
+                        <div class="space-y-1 overflow-hidden">
+                            ${dotsHtml}
+                        </div>
+                    </div>
+                `;
+            }
+
+            grid.innerHTML = cellsHtml;
+            renderSelectedDayPanel();
+        }
+
+        function renderSelectedDayPanel() {
+            document.getElementById('selected-date-title').textContent = `${formatDateBR(selectedDateStr)} ${selectedDateStr === TODAY_STR ? '(Hoje)' : ''}`;
+            const dayTasks = tasks.filter(t => t.date === selectedDateStr);
+            const container = document.getElementById('selected-day-tasks');
+
+            if (dayTasks.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-slate-500 text-xs border border-dashed border-slate-800 rounded-xl">
+                        Nenhuma atividade agendada para esta data.
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = dayTasks.map(t => {
+                const area = areas.find(a => a.id === t.areaId) || areas[0];
+                const prog = getTaskProgress(t);
+                return `
+                    <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="px-2 py-0.5 text-[10px] font-semibold rounded border ${area.badgeClass}">${area.name} • ${t.sublist}</span>
+                            <span class="text-xs text-slate-400 font-medium">${t.time}</span>
+                        </div>
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-sm font-semibold ${t.done ? 'line-through text-slate-500' : 'text-white'}">${t.title}</span>
+                            <button onclick="toggleTaskDone(${t.id})" class="text-xs px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-emerald-400 shrink-0">
+                                ${t.done ? 'Reabrir' : 'Concluir'}
+                            </button>
+                        </div>
+                        ${prog.total > 0 ? `<div class="text-[11px] text-slate-400">Progresso: <strong class="text-emerald-400">${prog.pct}%</strong> (${prog.doneCount}/${prog.total} etapas)</div>` : ''}
+                        ${t.link ? `<a href="${t.link}" target="_blank" class="inline-flex items-center gap-1 text-[11px] text-cyan-400 hover:underline"><i data-lucide="external-link" class="w-3 h-3"></i> ${t.linkLabel || 'Abrir Link'}</a>` : ''}
+                    </div>
+                `;
+            }).join('');
+            lucide.createIcons();
+        }
+
+        function selectCalendarDate(dateStr) {
+            selectedDateStr = dateStr;
+            document.getElementById('task-date').value = dateStr;
+            renderCalendar();
+        }
+
+        function changeMonth(delta) {
+            currentCalDate.setMonth(currentCalDate.getMonth() + delta);
+            renderCalendar();
+        }
+
+        function selectToday() {
+            currentCalDate = new Date();
+            selectedDateStr = TODAY_STR;
+            renderCalendar();
+        }
+
+        function renderAll() {
+            renderAreas();
+            renderActiveAreaDetails();
+            renderGradesCalculator();
+            renderCalendar();
+            updateUrgentBadge();
+        }
+
+        // Inicialização
+        document.getElementById('task-date').value = TODAY_STR;
+        renderAll();
+        setTimeout(() => triggerPopups(false), 500);
+    </script>
+</body>
+</html>
