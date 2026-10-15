@@ -3,12 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0b1120">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Gerenciador de Vida & Tarefas Pro</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
+        :root {
+            color-scheme: dark;
+        }
         body {
             background-color: #0b1120;
             color: #f8fafc;
@@ -24,79 +30,162 @@
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #0f172a; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        
+        input[type="date"]::-webkit-calendar-picker-indicator,
+        input[type="time"]::-webkit-calendar-picker-indicator {
+            cursor: pointer;
+            opacity: 0.7;
+        }
+        input[type="date"]::-webkit-calendar-picker-indicator:hover,
+        input[type="time"]::-webkit-calendar-picker-indicator:hover {
+            opacity: 1;
+        }
     </style>
 </head>
-<body class="min-h-screen p-4 md:p-8 pb-24">
+<body class="min-h-screen p-3 sm:p-4 md:p-8 pb-24">
 
-    <div class="max-w-7xl mx-auto space-y-8">
+    <div class="max-w-7xl mx-auto space-y-6 sm:space-y-8">
 
         <!-- CABEÇALHO PRINCIPAL -->
-        <header class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-slate-900/80 border border-slate-800 p-6 rounded-2xl shadow-xl backdrop-blur-md">
+        <header class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-slate-900/80 border border-slate-800 p-5 md:p-6 rounded-2xl shadow-xl backdrop-blur-md">
             <div>
-                <h1 class="text-2xl md:text-3xl font-bold bg-gradient-to-r from-indigo-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent flex items-center gap-3">
-                    <i data-lucide="layers" class="text-indigo-400 w-8 h-8"></i>
-                    Gerenciador de Vida & Tarefas
+                <h1 class="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-indigo-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent flex items-center gap-3">
+                    <i data-lucide="layers" class="text-indigo-400 w-7 h-7 sm:w-8 sm:h-8 shrink-0"></i>
+                    <span>Gerenciador de Vida & Tarefas</span>
                 </h1>
-                <p class="text-slate-400 text-sm mt-1">Sub-tarefas com progresso, calculadora de notas, links rápidos e modo foco</p>
+                <div class="flex flex-wrap items-center gap-2 mt-1.5">
+                    <span id="sync-live-pill" onclick="openCloudConfigModal()" class="cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-800 text-slate-400 border border-slate-700">
+                        <span id="sync-dot" class="w-2 h-2 rounded-full bg-slate-500"></span>
+                        <span id="sync-live-text">Nuvem desconectada (Clique para ativar PC ⇄ Celular)</span>
+                    </span>
+                    <span id="last-device-info" class="text-[11px] text-slate-500"></span>
+                </div>
             </div>
 
             <!-- Controles Superiores -->
-            <div class="flex flex-wrap items-center gap-2.5">
+            <div class="flex flex-wrap items-center gap-2">
+                <!-- Botão Configurar Nuvem / QR Code Celular -->
+                <button id="btn-cloud-config" onclick="openCloudConfigModal()" class="px-3.5 py-2 text-xs font-semibold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 rounded-xl transition flex items-center gap-2">
+                    <i data-lucide="cloud" class="w-4 h-4"></i>
+                    <span id="cloud-status-text">Nuvem PC ⇄ Celular</span>
+                </button>
+
+                <!-- Botão Forçar Sincronização -->
+                <button onclick="pullFromCloud(true)" class="p-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-slate-300 transition" title="Sincronizar agora com a nuvem">
+                    <i data-lucide="refresh-cw" class="w-4 h-4" id="sync-icon"></i>
+                </button>
+
                 <!-- Botão MODO FOCO DE HOJE -->
-                <button id="btn-focus-mode" onclick="toggleFocusMode()" class="px-4 py-2 text-xs font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 rounded-xl transition flex items-center gap-2 shadow-lg shadow-amber-500/5">
+                <button id="btn-focus-mode" onclick="toggleFocusMode()" class="px-3.5 py-2 text-xs font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 rounded-xl transition flex items-center gap-1.5 shadow-lg shadow-amber-500/5">
                     <i data-lucide="zap" class="w-4 h-4"></i>
-                    <span id="focus-mode-text">Modo Foco de Hoje</span>
+                    <span id="focus-mode-text">Modo Foco</span>
                 </button>
 
                 <!-- Botão Calculadora de Notas -->
-                <button onclick="scrollToSection('grades-section')" class="px-3.5 py-2 text-xs font-medium bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 border border-indigo-500/30 rounded-xl transition flex items-center gap-2">
+                <button onclick="scrollToSection('grades-section')" class="px-3 py-2 text-xs font-medium bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 border border-indigo-500/30 rounded-xl transition flex items-center gap-1.5">
                     <i data-lucide="calculator" class="w-4 h-4"></i>
-                    Calculadora de Notas
+                    <span class="hidden sm:inline">Calculadora de</span> Notas
                 </button>
 
                 <!-- Seletor de antecedência dos avisos -->
-                <div class="flex items-center gap-2 bg-slate-800/80 border border-slate-700 px-3 py-2 rounded-xl text-xs">
-                    <i data-lucide="clock" class="w-4 h-4 text-cyan-400"></i>
-                    <span class="text-slate-300 hidden sm:inline">Avisar:</span>
+                <div class="flex items-center gap-1.5 bg-slate-800/80 border border-slate-700 px-2.5 py-2 rounded-xl text-xs">
+                    <i data-lucide="clock" class="w-3.5 h-3.5 text-cyan-400"></i>
                     <select id="alert-days-select" onchange="changeAlertWindow(this.value)" class="bg-transparent text-white font-semibold focus:outline-none cursor-pointer">
-                        <option value="1" class="bg-slate-900">Até 1 dia</option>
-                        <option value="3" class="bg-slate-900" selected>Até 3 dias</option>
-                        <option value="7" class="bg-slate-900">Até 7 dias</option>
+                        <option value="1" class="bg-slate-900">Aviso: 1 dia</option>
+                        <option value="3" class="bg-slate-900" selected>Aviso: 3 dias</option>
+                        <option value="7" class="bg-slate-900">Aviso: 7 dias</option>
                     </select>
                 </div>
 
-                <!-- Botão Notificação Nativa do Windows -->
-                <button id="btn-win-notify" onclick="requestWindowsNotification()" class="px-3 py-2 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-xl transition flex items-center gap-1.5" title="Ativar notificações nativas do Windows 11">
-                    <i data-lucide="monitor-speaker" class="w-4 h-4 text-emerald-400"></i>
-                    <span id="win-notify-text" class="hidden md:inline">Alerta Windows</span>
-                </button>
-
                 <!-- Sininho de Urgências -->
-                <button onclick="toggleAlertModal()" class="relative p-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl transition" title="Ver atividades próximas">
+                <button onclick="toggleAlertModal()" class="relative p-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl transition" title="Ver atividades próximas">
                     <i data-lucide="bell" class="w-5 h-5 text-amber-400"></i>
                     <span id="urgent-badge" class="hidden absolute -top-1.5 -right-1.5 bg-rose-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow">0</span>
                 </button>
             </div>
         </header>
 
-        <!-- BANNER DO MODO FOCO DE HOJE (Visível apenas quando o Modo Foco está ativo) -->
-        <div id="focus-mode-banner" class="hidden bg-gradient-to-r from-amber-500/20 via-indigo-500/15 to-emerald-500/20 border border-amber-500/40 rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
+        <!-- MODAL DE SINCRONIZAÇÃO NUVEM + QR CODE PARA CELULAR -->
+        <div id="cloud-modal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 max-h-[92vh] overflow-y-auto">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <h3 class="text-base font-bold text-white flex items-center gap-2">
+                        <i data-lucide="cloud-cog" class="w-5 h-5 text-emerald-400"></i>
+                        Sincronização em Tempo Real (PC ⇄ Celular)
+                    </h3>
+                    <button onclick="closeCloudConfigModal()" class="text-slate-400 hover:text-white">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+
+                <div class="space-y-3 text-xs text-slate-300">
+                    <div class="bg-slate-950/80 border border-slate-800 p-3 rounded-xl text-slate-400 leading-relaxed">
+                        Qualquer alteração feita no <strong class="text-white">PC</strong> ou no <strong class="text-white">Celular</strong> é enviada imediatamente para a nuvem e atualiza o outro aparelho automaticamente a cada <strong class="text-emerald-400">12 segundos</strong>.
+                    </div>
+
+                    <div>
+                        <label class="block text-slate-300 font-semibold mb-1">1. Personal Access Token do GitHub (permissão 'gist') *</label>
+                        <input type="password" id="input-gh-token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-emerald-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-slate-300 font-semibold mb-1">2. ID do Gist <span class="text-slate-500 font-normal">(Opcional: deixe em branco para criar/achar sozinho)</span></label>
+                        <input type="text" id="input-gh-gist-id" placeholder="Ex: a1b2c3d4e5f6g7h8i9j0 (ou deixe vazio)" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-emerald-500">
+                    </div>
+
+                    <div id="cloud-last-sync-info" class="text-[11px] text-emerald-400 font-medium pt-1"></div>
+                </div>
+
+                <!-- SEÇÃO DE CONEXÃO RÁPIDA COM O CELULAR (QR CODE / LINK MÁGICO) -->
+                <div id="mobile-pair-box" class="hidden bg-slate-950/90 border border-indigo-500/30 rounded-xl p-4 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
+                            <i data-lucide="smartphone" class="w-4 h-4"></i>
+                            Parear Celular sem digitar nada
+                        </span>
+                        <button onclick="copyMagicSyncLink()" class="px-2.5 py-1 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/30 rounded-lg text-[11px] font-semibold flex items-center gap-1">
+                            <i data-lucide="copy" class="w-3 h-3"></i> Copiar Link Mágico
+                        </button>
+                    </div>
+                    <p class="text-[11px] text-slate-400">
+                        Aponte a câmera do seu celular para o QR Code abaixo (ou envie o Link Mágico para você mesmo). O celular já abrirá o site conectado à sua nuvem automaticamente!
+                    </p>
+                    <div class="flex justify-center py-2">
+                        <img id="qr-code-img" alt="QR Code de Sincronização" class="w-40 h-40 rounded-xl border-4 border-white bg-white p-1 shadow-lg" />
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-800">
+                    <div class="flex items-center gap-3">
+                        <button onclick="disconnectCloud()" class="text-xs text-rose-400 hover:underline">Desconectar</button>
+                        <button onclick="forcePushLocalToCloud()" class="text-xs text-cyan-400 hover:underline" title="Sobrescrever a nuvem com os dados atuais desta tela">Forçar Envio Local</button>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="closeCloudConfigModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium">Fechar</button>
+                        <button onclick="saveCloudConfig()" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-slate-950 rounded-xl text-xs font-bold shadow-lg shadow-emerald-500/20">Salvar e Sincronizar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BANNER DO MODO FOCO DE HOJE -->
+        <div id="focus-mode-banner" class="hidden bg-gradient-to-r from-amber-500/20 via-indigo-500/15 to-emerald-500/20 border border-amber-500/40 rounded-2xl p-5 md:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
             <div class="flex items-center gap-4">
-                <div class="p-3.5 bg-amber-500/20 border border-amber-500/40 rounded-2xl text-amber-300">
-                    <i data-lucide="target" class="w-8 h-8"></i>
+                <div class="p-3 bg-amber-500/20 border border-amber-500/40 rounded-2xl text-amber-300">
+                    <i data-lucide="target" class="w-7 h-7"></i>
                 </div>
                 <div>
                     <span class="text-[11px] font-bold uppercase tracking-wider text-amber-400">Imersão Total Ativa</span>
-                    <h2 class="text-xl font-bold text-white">Visão: Modo Foco de Hoje</h2>
-                    <p class="text-xs text-slate-300 mt-0.5">Exibindo apenas as metas agendadas para hoje ou atrasadas de todas as áreas da sua vida.</p>
+                    <h2 class="text-lg md:text-xl font-bold text-white">Visão: Modo Foco de Hoje</h2>
+                    <p class="text-xs text-slate-300 mt-0.5">Exibindo apenas as atividades agendadas para hoje ou atrasadas de todas as áreas.</p>
                 </div>
             </div>
             <div class="flex items-center gap-3">
                 <div class="text-right hidden sm:block">
-                    <div id="focus-stats-count" class="text-lg font-bold text-white">0 pendentes</div>
-                    <div class="text-[11px] text-slate-400">para concluir hoje</div>
+                    <div id="focus-stats-count" class="text-base font-bold text-white">0 pendentes</div>
+                    <div class="text-[11px] text-slate-400">para hoje</div>
                 </div>
-                <button onclick="toggleFocusMode()" class="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold transition flex items-center gap-2">
+                <button onclick="toggleFocusMode()" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold transition flex items-center gap-2">
                     <i data-lucide="minimize-2" class="w-4 h-4"></i>
                     Sair do Modo Foco
                 </button>
@@ -106,23 +195,23 @@
         <!-- SEÇÃO 1: SELETOR DE "PARTES DA VIDA" -->
         <section id="areas-section" class="space-y-3">
             <div class="flex items-center justify-between">
-                <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                <h2 class="text-xs sm:text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
                     <i data-lucide="compass" class="w-4 h-4 text-indigo-400"></i>
                     1. Escolha uma Parte da Vida
                 </h2>
-                <button onclick="openNewAreaModal()" class="text-xs text-indigo-400 hover:text-indigo-300 font-medium flex items-center gap-1">
+                <button onclick="openNewAreaModal()" class="text-xs bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 border border-indigo-500/30 px-3 py-1.5 rounded-xl font-semibold flex items-center gap-1.5 transition">
                     <i data-lucide="plus-circle" class="w-4 h-4"></i>
                     Nova Parte da Vida
                 </button>
             </div>
 
-            <div id="life-areas-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div id="life-areas-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 <!-- Gerado via JS -->
             </div>
         </section>
 
         <!-- SEÇÃO 2: GERENCIADOR DE TAREFAS, BUSCA, FILTROS E SUB-TAREFAS -->
-        <section class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+        <section class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl space-y-6">
             
             <!-- Topo da Área e Sub-listas -->
             <div id="area-header-bar" class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-5">
@@ -131,13 +220,18 @@
                         <i data-lucide="graduation-cap" class="w-6 h-6"></i>
                     </div>
                     <div>
-                        <h2 id="active-area-title" class="text-xl font-bold text-white">Faculdade (Poli)</h2>
-                        <p id="active-area-subtitle" class="text-xs text-slate-400">Gerencie suas listas, etapas de progresso e links rápidos</p>
+                        <div class="flex items-center gap-2">
+                            <h2 id="active-area-title" class="text-lg sm:text-xl font-bold text-white">Faculdade (Poli)</h2>
+                            <button onclick="deleteArea(activeAreaId, event)" class="text-slate-500 hover:text-rose-400 p-1 rounded-lg transition" title="Excluir esta Parte da Vida">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                        <p id="active-area-subtitle" class="text-xs text-slate-400">Gerencie suas listas, etapas com datas, prioridades e horários</p>
                     </div>
                 </div>
 
-                <!-- Abas das Sub-listas -->
-                <div class="flex flex-wrap items-center gap-2" id="sublists-tabs">
+                <!-- Abas das Sub-listas (Com botão 'x' para apagar listas) -->
+                <div class="flex flex-wrap items-center gap-1.5 sm:gap-2" id="sublists-tabs">
                     <!-- Gerado via JS -->
                 </div>
             </div>
@@ -187,13 +281,13 @@
                     </div>
 
                     <div class="md:col-span-2">
-                        <label class="block text-[11px] text-slate-400 mb-1">Nome do Botão do Link</label>
-                        <input type="text" id="task-link-label" placeholder="Ex: Abrir Repositório / PDF" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500">
+                        <label class="block text-[11px] text-slate-400 mb-1">Nome do Botão</label>
+                        <input type="text" id="task-link-label" placeholder="Ex: Abrir PDF / Repo" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500">
                     </div>
 
                     <div class="md:col-span-4">
                         <label class="block text-[11px] text-slate-400 mb-1 flex items-center gap-1">
-                            <i data-lucide="list-checks" class="w-3 h-3 text-emerald-400"></i> Sub-tarefas iniciais separadas por vírgula (Opcional)
+                            <i data-lucide="list-checks" class="w-3 h-3 text-emerald-400"></i> Sub-tarefas iniciais por vírgula (Opcional)
                         </label>
                         <input type="text" id="task-initial-subtasks" placeholder="Ex: Modelar sistema, Simular malha, Gerar gráficos" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500">
                     </div>
@@ -209,14 +303,13 @@
 
             <!-- BARRA DE BUSCA INSTANTÂNEA E FILTRO POR PRIORIDADE -->
             <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-slate-950/40 p-3 rounded-xl border border-slate-800/70">
-                <!-- Busca Instantânea -->
                 <div class="relative flex-1">
                     <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
                     <input 
                         type="text" 
                         id="search-input" 
                         oninput="handleSearchAndFilter()" 
-                        placeholder="Busca instantânea por título, sub-lista ou sub-tarefa... (Pressione '/' para focar)" 
+                        placeholder="Busca instantânea por título, lista ou sub-tarefa... (Tecla '/')" 
                         class="w-full bg-slate-900 border border-slate-700/80 rounded-lg pl-9 pr-8 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition"
                     >
                     <button id="clear-search-btn" onclick="clearSearch()" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
@@ -224,7 +317,6 @@
                     </button>
                 </div>
 
-                <!-- Filtros de Prioridade -->
                 <div class="flex flex-wrap items-center gap-1.5">
                     <span class="text-[11px] text-slate-400 mr-1 flex items-center gap-1">
                         <i data-lucide="filter" class="w-3 h-3"></i> Prioridade:
@@ -235,9 +327,8 @@
                     <button onclick="setPriorityFilter('baixa')" id="prio-btn-baixa" class="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-sky-300 hover:bg-slate-700 border border-slate-700 transition">Baixa</button>
                 </div>
 
-                <!-- Ordenação -->
                 <div class="flex items-center gap-1.5">
-                    <select id="sort-select" onchange="handleSearchAndFilter()" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none">
+                    <select id="sort-select" onchange="handleSearchAndFilter()" class="w-full md:w-auto bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none">
                         <option value="date">Ordenar: Data mais próxima</option>
                         <option value="priority">Ordenar: Maior Prioridade</option>
                         <option value="progress">Ordenar: Maior % de Progresso</option>
@@ -253,17 +344,16 @@
         </section>
 
         <!-- SEÇÃO 3: CALCULADORA DE NOTAS E PESOS POR DISCIPLINA -->
-        <section id="grades-section" class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+        <section id="grades-section" class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl space-y-6">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
                 <div>
                     <h2 class="text-lg font-bold text-white flex items-center gap-2">
                         <i data-lucide="calculator" class="w-5 h-5 text-indigo-400"></i>
                         Calculadora de Notas & Pesos por Disciplina
                     </h2>
-                    <p class="text-xs text-slate-400 mt-0.5">Acompanhe suas médias parciais e descubra exatamente quanto precisa tirar nas próximas avaliações</p>
+                    <p class="text-xs text-slate-400 mt-0.5">Simule suas médias parciais e veja quanto precisa tirar nas próximas provas</p>
                 </div>
 
-                <!-- Adicionar Nova Disciplina -->
                 <form id="add-subject-form" class="flex flex-wrap items-center gap-2">
                     <input type="text" id="subject-name" required placeholder="Nova disciplina (ex: Controle Linear)" class="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500">
                     <input type="number" id="subject-target" step="0.1" min="1" max="10" value="7.0" title="Média alvo para aprovação" class="w-20 bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-white focus:outline-none focus:border-indigo-500">
@@ -282,14 +372,14 @@
         <section id="calendar-section" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
             <!-- Calendário Mensal (2/3) -->
-            <div class="lg:col-span-2 bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+            <div class="lg:col-span-2 bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl space-y-4">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
                     <div>
                         <h2 class="text-lg font-bold text-white flex items-center gap-2">
                             <i data-lucide="calendar-days" class="w-5 h-5 text-emerald-400"></i>
                             Calendário Geral Unificado
                         </h2>
-                        <p class="text-xs text-slate-400">Reúne todas as provas, entregas e atividades de todas as Partes da Vida</p>
+                        <p class="text-xs text-slate-400">Todas as provas, entregas e atividades reunidas em um só lugar</p>
                     </div>
 
                     <div class="flex items-center gap-2">
@@ -303,37 +393,28 @@
                     </div>
                 </div>
 
-                <!-- Legenda das Partes da Vida -->
-                <div id="calendar-legend" class="flex flex-wrap gap-3 text-xs">
-                    <!-- Gerado via JS -->
-                </div>
+                <div id="calendar-legend" class="flex flex-wrap gap-3 text-xs"></div>
 
-                <!-- Cabeçalho de Dias da Semana -->
-                <div class="grid grid-cols-7 gap-1.5 text-center text-xs font-semibold text-slate-400 py-1">
+                <div class="grid grid-cols-7 gap-1 sm:gap-1.5 text-center text-xs font-semibold text-slate-400 py-1">
                     <div>Dom</div><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div>
                 </div>
 
-                <!-- Grade do Calendário -->
-                <div id="calendar-grid" class="grid grid-cols-7 gap-1.5">
-                    <!-- Gerado via JS -->
-                </div>
+                <div id="calendar-grid" class="grid grid-cols-7 gap-1 sm:gap-1.5"></div>
             </div>
 
             <!-- Painel Lateral do Dia Selecionado (1/3) -->
-            <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col justify-between space-y-4">
+            <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl flex flex-col justify-between space-y-4">
                 <div class="space-y-4">
                     <div class="border-b border-slate-800 pb-4">
                         <span class="text-[11px] uppercase tracking-wider font-semibold text-emerald-400">Agenda do Dia</span>
                         <h3 id="selected-date-title" class="text-lg font-bold text-white mt-0.5">Selecione um dia</h3>
                     </div>
 
-                    <div id="selected-day-tasks" class="space-y-3 max-h-[380px] overflow-y-auto pr-1">
-                        <!-- Gerado via JS -->
-                    </div>
+                    <div id="selected-day-tasks" class="space-y-3 max-h-[380px] overflow-y-auto pr-1"></div>
                 </div>
 
                 <div class="pt-4 border-t border-slate-800 text-xs text-slate-400 flex items-center justify-between">
-                    <span>Clique em qualquer dia no calendário para filtrar</span>
+                    <span>Toque em qualquer dia para filtrar</span>
                     <button onclick="selectToday()" class="text-emerald-400 hover:underline font-medium">Ir para Hoje</button>
                 </div>
             </div>
@@ -343,7 +424,7 @@
     </div>
 
     <!-- CONTAINER DE POP-UPS FLUTUANTES -->
-    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-3 max-w-sm w-full pointer-events-none"></div>
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-3 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
 
     <!-- MODAL CENTRAL DE ALERTAS (SININHO) -->
     <div id="alert-modal" class="hidden fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4">
@@ -368,15 +449,16 @@
         function getOffsetDateStr(offsetDays) {
             const d = new Date();
             d.setDate(d.getDate() + offsetDays);
-            const yyyy = d.getFullYear();
-            const mm = String(d.getMonth() + 1).padStart(2, '0');
-            const dd = String(d.getDate()).padStart(2, '0');
-            return `${yyyy}-${mm}-${dd}`;
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         }
 
         const TODAY_STR = getOffsetDateStr(0);
 
-        // Estrutura Padrão das "Partes da Vida"
+        // Identifica automaticamente se o aparelho atual é Celular ou PC
+        const CURRENT_DEVICE = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+            ? '📱 Celular'
+            : '💻 Computador';
+
         const defaultAreas = [
             {
                 id: 'faculdade',
@@ -416,7 +498,6 @@
             }
         ];
 
-        // Tarefas iniciais demonstrando Sub-tarefas, Barra de Progresso, Prioridades e Links Rápidos
         const defaultTasks = [
             {
                 id: 101,
@@ -428,11 +509,11 @@
                 time: '16:00',
                 done: false,
                 link: 'https://scholar.google.com.br',
-                linkLabel: 'Material / Resumo PDF',
+                linkLabel: 'Material PDF',
                 subtasks: [
-                    { id: 1, text: 'Revisar Lugar das Raízes (Root Locus)', done: true },
-                    { id: 2, text: 'Resolver lista de compensadores avanço-atraso', done: true },
-                    { id: 3, text: 'Simular resposta ao degrau no MATLAB', done: false }
+                    { id: 1, text: 'Revisar Lugar das Raízes (Root Locus)', date: getOffsetDateStr(0), done: true },
+                    { id: 2, text: 'Resolver lista de compensadores avanço-atraso', date: getOffsetDateStr(0), done: true },
+                    { id: 3, text: 'Simular resposta ao degrau no MATLAB', date: getOffsetDateStr(0), done: false }
                 ]
             },
             {
@@ -445,45 +526,15 @@
                 time: '10:00',
                 done: false,
                 link: 'https://www.overleaf.com',
-                linkLabel: 'Abrir Projeto LaTeX',
+                linkLabel: 'Abrir LaTeX',
                 subtasks: [
-                    { id: 1, text: 'Coletar dados da planta', done: true },
-                    { id: 2, text: 'Gerar gráficos de Bode e IAE', done: true },
-                    { id: 3, text: 'Exportar PDF final', done: true }
+                    { id: 1, text: 'Coletar dados da planta', date: getOffsetDateStr(0), done: true },
+                    { id: 2, text: 'Gerar gráficos de Bode e IAE', date: getOffsetDateStr(1), done: true },
+                    { id: 3, text: 'Exportar PDF final', date: getOffsetDateStr(1), done: true }
                 ]
-            },
-            {
-                id: 103,
-                areaId: 'projetos',
-                sublist: 'Simulações & Drones',
-                title: 'Testar controle de posição no Webots SITL',
-                priority: 'alta',
-                date: getOffsetDateStr(0),
-                time: '19:30',
-                done: false,
-                link: 'https://github.com',
-                linkLabel: 'Repositório GitHub',
-                subtasks: [
-                    { id: 1, text: 'Ajustar parâmetros do controlador', done: true },
-                    { id: 2, text: 'Validar log de telemetria em Python', done: false }
-                ]
-            },
-            {
-                id: 104,
-                areaId: 'exercicios',
-                sublist: 'Treino de Força',
-                title: 'Treino A + Mobilidade',
-                priority: 'baixa',
-                date: getOffsetDateStr(0),
-                time: '18:00',
-                done: false,
-                link: '',
-                linkLabel: '',
-                subtasks: []
             }
         ];
 
-        // Disciplinas iniciais de exemplo para a Calculadora de Notas
         const defaultSubjects = [
             {
                 id: 1,
@@ -494,50 +545,416 @@
                     { id: 12, name: '2ª Avaliação (Prova 2)', weight: 1, grade: null },
                     { id: 13, name: 'Projeto Prático / MATLAB', weight: 1, grade: 9.0 }
                 ]
-            },
-            {
-                id: 2,
-                name: 'Eletrônica & Automação',
-                target: 7.0,
-                assessments: [
-                    { id: 21, name: '1ª Avaliação', weight: 4, grade: 6.5 },
-                    { id: 22, name: '2ª Avaliação', weight: 4, grade: null },
-                    { id: 23, name: 'Laboratório / Relatórios', weight: 2, grade: 8.5 }
-                ]
             }
         ];
 
-        // Carrega dados preservando compatibilidade com a versão anterior
+        function normalizeTasks(arr) {
+            return (arr || []).map(t => ({
+                ...t,
+                priority: t.priority || 'media',
+                time: t.time || '12:00',
+                link: t.link || '',
+                linkLabel: t.linkLabel || '',
+                subtasks: Array.isArray(t.subtasks) ? t.subtasks.map(st => ({
+                    ...st,
+                    date: st.date || ''
+                })) : []
+            }));
+        }
+
+        // Carrega dados locais + Timestamp de controle de versão
         let areas = JSON.parse(localStorage.getItem('life_areas_v2')) || defaultAreas;
         let rawTasks = JSON.parse(localStorage.getItem('life_tasks_v2')) || defaultTasks;
         let subjects = JSON.parse(localStorage.getItem('life_subjects_v1')) || defaultSubjects;
+        let localUpdatedAt = parseInt(localStorage.getItem('life_updated_at') || '0', 10);
 
-        // Normaliza tarefas antigas para garantir que tenham subtasks, priority e link
-        let tasks = rawTasks.map(t => ({
-            ...t,
-            priority: t.priority || 'media',
-            link: t.link || '',
-            linkLabel: t.linkLabel || '',
-            subtasks: Array.isArray(t.subtasks) ? t.subtasks : []
-        }));
+        let tasks = normalizeTasks(rawTasks);
 
-        let activeAreaId = areas[0].id;
+        let activeAreaId = areas[0]?.id || 'faculdade';
         let activeSublist = 'Todas';
         let activePriorityFilter = 'todas';
         let isFocusMode = false;
-        let expandedSubtasks = new Set(tasks.map(t => t.id)); // Mantém sub-tarefas visíveis por padrão
+        let expandedSubtasks = new Set(tasks.map(t => t.id));
         let alertWindowDays = 3;
         let dismissedToasts = new Set();
 
         let currentCalDate = new Date();
         let selectedDateStr = TODAY_STR;
 
-        function saveData() {
+        // Credenciais Nuvem (GitHub Gist)
+        let ghToken = localStorage.getItem('gh_token') || '';
+        let ghGistId = localStorage.getItem('gh_gist_id') || '';
+        let isSyncing = false;
+        let pushDebounceTimer = null;
+
+        function saveLocalOnly(timestamp) {
+            if (timestamp !== undefined) {
+                localUpdatedAt = timestamp;
+                localStorage.setItem('life_updated_at', String(localUpdatedAt));
+            }
             localStorage.setItem('life_areas_v2', JSON.stringify(areas));
             localStorage.setItem('life_tasks_v2', JSON.stringify(tasks));
             localStorage.setItem('life_subjects_v1', JSON.stringify(subjects));
         }
 
+        // Chamado sempre que o usuário faz qualquer modificação no PC ou no Celular
+        function saveData() {
+            const nowMs = Date.now();
+            saveLocalOnly(nowMs);
+            schedulePushToCloud();
+        }
+
+        function schedulePushToCloud() {
+            if (!ghToken) return;
+            clearTimeout(pushDebounceTimer);
+            setCloudStatusUI('syncing');
+            pushDebounceTimer = setTimeout(() => {
+                pushToCloud();
+            }, 350);
+        }
+
+        // =========================================================================
+        // MOTOR DE SINCRONIZAÇÃO BIDIRECIONAL EM TEMPO REAL (PC ⇄ NUVEM ⇄ CELULAR)
+        // =========================================================================
+        function cleanGistId(rawInput) {
+            if (!rawInput) return '';
+            const trimmed = rawInput.trim().replace(/\/+$/, '');
+            const parts = trimmed.split('/');
+            return parts[parts.length - 1];
+        }
+
+        // Lê parâmetros mágicos de conexão rápida (#sync=...) quando escaneado pelo celular
+        function checkMagicSyncUrlHash() {
+            if (window.location.hash && window.location.hash.startsWith('#sync=')) {
+                try {
+                    const encoded = window.location.hash.replace('#sync=', '');
+                    const decoded = JSON.parse(atob(encoded));
+                    if (decoded.t) {
+                        ghToken = decoded.t;
+                        ghGistId = decoded.g || '';
+                        localStorage.setItem('gh_token', ghToken);
+                        localStorage.setItem('gh_gist_id', ghGistId);
+                        // Limpa a URL imediatamente por segurança
+                        history.replaceState(null, document.title, window.location.pathname + window.location.search);
+                    }
+                } catch (e) {
+                    console.error('Erro ao ler Link Mágico:', e);
+                }
+            }
+        }
+
+        function updateMobileQrBox() {
+            const box = document.getElementById('mobile-pair-box');
+            const qrImg = document.getElementById('qr-code-img');
+            if (ghToken && ghGistId) {
+                const baseUrl = window.location.origin + window.location.pathname;
+                const payload = btoa(JSON.stringify({ t: ghToken, g: ghGistId }));
+                const magicUrl = `${baseUrl}#sync=${payload}`;
+                qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(magicUrl)}`;
+                box.classList.remove('hidden');
+            } else {
+                box.classList.add('hidden');
+            }
+        }
+
+        function copyMagicSyncLink() {
+            if (!ghToken || !ghGistId) return;
+            const baseUrl = window.location.origin + window.location.pathname;
+            const payload = btoa(JSON.stringify({ t: ghToken, g: ghGistId }));
+            const magicUrl = `${baseUrl}#sync=${payload}`;
+            navigator.clipboard.writeText(magicUrl).then(() => {
+                alert('Link Mágico copiado! Envie para o seu celular (WhatsApp/Telegram) e abra-o lá para conectar automaticamente.');
+            });
+        }
+
+        function setCloudStatusUI(state, detailText = '') {
+            const textEl = document.getElementById('cloud-status-text');
+            const btnEl = document.getElementById('btn-cloud-config');
+            const iconEl = document.getElementById('sync-icon');
+            const pillEl = document.getElementById('sync-live-pill');
+            const dotEl = document.getElementById('sync-dot');
+            const liveTextEl = document.getElementById('sync-live-text');
+
+            if (state === 'syncing') {
+                textEl.textContent = 'Sincronizando...';
+                if (iconEl) iconEl.classList.add('animate-spin');
+                dotEl.className = 'w-2 h-2 rounded-full bg-amber-400 animate-ping';
+                liveTextEl.textContent = 'Sincronizando PC ⇄ Celular...';
+            } else if (state === 'connected') {
+                textEl.textContent = 'Nuvem Ativa ✓';
+                btnEl.className = "px-3.5 py-2 text-xs font-semibold bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 rounded-xl transition flex items-center gap-2";
+                if (iconEl) iconEl.classList.remove('animate-spin');
+                pillEl.className = "cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30";
+                dotEl.className = 'w-2 h-2 rounded-full bg-emerald-400';
+                liveTextEl.textContent = detailText || 'Sincronizado em tempo real (PC ⇄ Celular)';
+            } else if (state === 'error') {
+                textEl.textContent = 'Erro na Nuvem';
+                btnEl.className = "px-3.5 py-2 text-xs font-semibold bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 rounded-xl transition flex items-center gap-2";
+                if (iconEl) iconEl.classList.remove('animate-spin');
+                pillEl.className = "cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-500/15 text-rose-300 border border-rose-500/30";
+                dotEl.className = 'w-2 h-2 rounded-full bg-rose-400';
+                liveTextEl.textContent = 'Erro de conexão com o GitHub Gist (Clique para verificar)';
+            } else {
+                textEl.textContent = 'Nuvem PC ⇄ Celular';
+                if (iconEl) iconEl.classList.remove('animate-spin');
+                pillEl.className = "cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-800 text-slate-400 border border-slate-700";
+                dotEl.className = 'w-2 h-2 rounded-full bg-slate-500';
+                liveTextEl.textContent = 'Nuvem desconectada (Clique para ativar PC ⇄ Celular)';
+            }
+        }
+
+        // Se o usuário informou apenas o Token, procura automaticamente um Gist com 'db.json' ou cria um novo
+        async function ensureGistExists() {
+            if (ghGistId) return ghGistId;
+
+            const listRes = await fetch('https://api.github.com/gists?per_page=50', {
+                headers: {
+                    'Authorization': `token ${ghToken}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                },
+                cache: 'no-store'
+            });
+
+            if (!listRes.ok) throw new Error('Token inválido');
+            const gists = await listRes.json();
+            const found = gists.find(g => g.files && g.files['db.json']);
+
+            if (found) {
+                ghGistId = found.id;
+                localStorage.setItem('gh_gist_id', ghGistId);
+                return ghGistId;
+            }
+
+            // Se não encontrou, cria automaticamente o Gist secreto para o usuário
+            const createRes = await fetch('https://api.github.com/gists', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `token ${ghToken}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    description: "Banco de Dados - Gerenciador de Vida & Tarefas",
+                    public: false,
+                    files: {
+                        "db.json": {
+                            content: JSON.stringify({
+                                updatedAt: Date.now(),
+                                lastDevice: CURRENT_DEVICE,
+                                areas,
+                                tasks,
+                                subjects
+                            }, null, 2)
+                        }
+                    }
+                })
+            });
+
+            if (!createRes.ok) throw new Error('Não foi possível criar o Gist automaticamente');
+            const createdData = await createRes.json();
+            ghGistId = createdData.id;
+            localStorage.setItem('gh_gist_id', ghGistId);
+            return ghGistId;
+        }
+
+        // Busca dados na nuvem (Executado ao abrir, ao focar na aba e automaticamente a cada 12s)
+        async function pullFromCloud(isManual = false) {
+            if (!ghToken) {
+                if (isManual) openCloudConfigModal();
+                return;
+            }
+            if (isSyncing) return;
+            isSyncing = true;
+            if (isManual) setCloudStatusUI('syncing');
+
+            try {
+                await ensureGistExists();
+
+                const res = await fetch(`https://api.github.com/gists/${ghGistId}?t=${Date.now()}`, {
+                    headers: {
+                        'Authorization': `token ${ghToken}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    },
+                    cache: 'no-store'
+                });
+
+                if (!res.ok) throw new Error('Falha ao acessar Gist');
+                const data = await res.json();
+
+                const fileObj = data.files['db.json'] || Object.values(data.files)[0];
+                if (fileObj && fileObj.content) {
+                    let parsed = null;
+                    try { parsed = JSON.parse(fileObj.content); } catch (e) { parsed = null; }
+
+                    // Verifica se a nuvem já tem estrutura válida
+                    if (parsed && !Array.isArray(parsed) && Array.isArray(parsed.tasks)) {
+                        const cloudUpdatedAt = typeof parsed.updatedAt === 'number'
+                            ? parsed.updatedAt
+                            : (parsed.updatedAt ? new Date(parsed.updatedAt).getTime() : 1);
+
+                        // Atualiza o aparelho se a nuvem for mais recente OU se o aparelho acabou de ser conectado (localUpdatedAt === 0) OU clique manual
+                        if (cloudUpdatedAt > localUpdatedAt || localUpdatedAt === 0 || isManual) {
+                            areas = parsed.areas && parsed.areas.length > 0 ? parsed.areas : areas;
+                            tasks = normalizeTasks(parsed.tasks);
+                            subjects = parsed.subjects || subjects;
+
+                            if (!areas.find(a => a.id === activeAreaId) && areas.length > 0) {
+                                activeAreaId = areas[0].id;
+                            }
+
+                            saveLocalOnly(cloudUpdatedAt);
+
+                            // Só re-renderiza se o usuário não estiver digitando em um input no momento
+                            const activeTag = document.activeElement ? document.activeElement.tagName : '';
+                            if (!['INPUT', 'TEXTAREA', 'SELECT'].includes(activeTag) || isManual) {
+                                renderAll();
+                            }
+                        } else if (localUpdatedAt > cloudUpdatedAt) {
+                            // O aparelho local tem uma modificação mais nova que ainda não subiu
+                            isSyncing = false;
+                            await pushToCloud();
+                            return;
+                        }
+
+                        const timeStr = new Date(cloudUpdatedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                        const devLabel = parsed.lastDevice ? `Última edição: ${parsed.lastDevice} às ${timeStr}` : `Sincronizado às ${timeStr}`;
+                        setCloudStatusUI('connected', `Sincronizado • ${devLabel}`);
+                        document.getElementById('cloud-last-sync-info').textContent = `✓ Conectado ao Gist (${ghGistId.slice(0, 8)}...) • ${devLabel}`;
+                    } else {
+                        // Gist estava vazio ([]): envia os dados atuais para inaugurar o banco na nuvem
+                        isSyncing = false;
+                        await pushToCloud(true);
+                        return;
+                    }
+                }
+                updateMobileQrBox();
+            } catch (err) {
+                console.error(err);
+                setCloudStatusUI('error');
+                if (isManual) alert('Erro ao sincronizar. Verifique se o seu Token possui a permissão "gist" marcada.');
+            } finally {
+                isSyncing = false;
+            }
+        }
+
+        // Envia imediatamente as alterações feitas no PC ou no Celular para o Gist
+        async function pushToCloud(forceOverwrite = false) {
+            if (!ghToken) return;
+            if (isSyncing && !forceOverwrite) return;
+            isSyncing = true;
+            setCloudStatusUI('syncing');
+
+            try {
+                await ensureGistExists();
+
+                if (!localUpdatedAt) {
+                    localUpdatedAt = Date.now();
+                    localStorage.setItem('life_updated_at', String(localUpdatedAt));
+                }
+
+                const payload = {
+                    description: "Banco de Dados - Gerenciador de Vida & Tarefas",
+                    files: {
+                        "db.json": {
+                            content: JSON.stringify({
+                                updatedAt: localUpdatedAt,
+                                lastDevice: CURRENT_DEVICE,
+                                areas,
+                                tasks,
+                                subjects
+                            }, null, 2)
+                        }
+                    }
+                };
+
+                const res = await fetch(`https://api.github.com/gists/${ghGistId}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `token ${ghToken}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!res.ok) throw new Error('Erro ao gravar no Gist');
+                const nowTime = new Date(localUpdatedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                setCloudStatusUI('connected', `Salvo na nuvem (${CURRENT_DEVICE} às ${nowTime})`);
+                document.getElementById('cloud-last-sync-info').textContent = `✓ Salvo na nuvem às ${nowTime} via ${CURRENT_DEVICE}`;
+                updateMobileQrBox();
+            } catch (err) {
+                console.error(err);
+                setCloudStatusUI('error');
+            } finally {
+                isSyncing = false;
+            }
+        }
+
+        function forcePushLocalToCloud() {
+            localUpdatedAt = Date.now();
+            localStorage.setItem('life_updated_at', String(localUpdatedAt));
+            pushToCloud(true);
+        }
+
+        function openCloudConfigModal() {
+            document.getElementById('input-gh-token').value = ghToken;
+            document.getElementById('input-gh-gist-id').value = ghGistId;
+            updateMobileQrBox();
+            document.getElementById('cloud-modal').classList.remove('hidden');
+        }
+
+        function closeCloudConfigModal() {
+            document.getElementById('cloud-modal').classList.add('hidden');
+        }
+
+        function saveCloudConfig() {
+            const tokenInput = document.getElementById('input-gh-token').value.trim();
+            const gistInput = cleanGistId(document.getElementById('input-gh-gist-id').value);
+
+            if (!tokenInput) {
+                alert('Informe o seu Personal Access Token do GitHub.');
+                return;
+            }
+
+            ghToken = tokenInput;
+            ghGistId = gistInput;
+            localStorage.setItem('gh_token', ghToken);
+            localStorage.setItem('gh_gist_id', ghGistId);
+            pullFromCloud(true);
+        }
+
+        function disconnectCloud() {
+            if (confirm('Deseja desconectar a sincronização em nuvem neste aparelho?')) {
+                ghToken = '';
+                ghGistId = '';
+                localStorage.removeItem('gh_token');
+                localStorage.removeItem('gh_gist_id');
+                setCloudStatusUI('disconnected');
+                updateMobileQrBox();
+                closeCloudConfigModal();
+            }
+        }
+
+        // Sincroniza sempre que você volta para a aba ou desbloqueia o celular
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible' && ghToken) {
+                pullFromCloud(false);
+            }
+        });
+        window.addEventListener('focus', () => {
+            if (ghToken) pullFromCloud(false);
+        });
+
+        // Auto-Sync em segundo plano a cada 12 segundos para manter PC e Celular sempre idênticos
+        setInterval(() => {
+            if (document.visibilityState === 'visible' && ghToken && !isSyncing) {
+                pullFromCloud(false);
+            }
+        }, 12000);
+
+        // ========================================================
+        // UTILITÁRIOS E NAVEGAÇÃO
+        // ========================================================
         function getDaysDiff(dateStr) {
             const today = new Date(TODAY_STR + 'T00:00:00');
             const target = new Date(dateStr + 'T00:00:00');
@@ -545,6 +962,7 @@
         }
 
         function formatDateBR(dateStr) {
+            if (!dateStr) return '';
             const [y, m, d] = dateStr.split('-');
             return `${d}/${m}/${y}`;
         }
@@ -554,7 +972,6 @@
             document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
         }
 
-        // Atalho de teclado '/' para focar na Busca Instantânea
         document.addEventListener('keydown', function(e) {
             if (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
                 e.preventDefault();
@@ -562,9 +979,6 @@
             }
         });
 
-        // ========================================================
-        // CÁLCULO DE PROGRESSO DAS SUB-TAREFAS (0% a 100%)
-        // ========================================================
         function getTaskProgress(task) {
             if (!task.subtasks || task.subtasks.length === 0) {
                 return { total: 0, doneCount: 0, pct: task.done ? 100 : 0 };
@@ -580,36 +994,26 @@
         // ========================================================
         function toggleFocusMode() {
             isFocusMode = !isFocusMode;
-            const areasSec = document.getElementById('areas-section');
-            const gradesSec = document.getElementById('grades-section');
-            const calSec = document.getElementById('calendar-section');
-            const areaHeaderBar = document.getElementById('area-header-bar');
-            const banner = document.getElementById('focus-mode-banner');
+            document.getElementById('areas-section').classList.toggle('hidden', isFocusMode);
+            document.getElementById('grades-section').classList.toggle('hidden', isFocusMode);
+            document.getElementById('calendar-section').classList.toggle('hidden', isFocusMode);
+            document.getElementById('area-header-bar').classList.toggle('hidden', isFocusMode);
+            document.getElementById('focus-mode-banner').classList.toggle('hidden', !isFocusMode);
+
             const btn = document.getElementById('btn-focus-mode');
             const btnText = document.getElementById('focus-mode-text');
-
             if (isFocusMode) {
-                areasSec.classList.add('hidden');
-                gradesSec.classList.add('hidden');
-                calSec.classList.add('hidden');
-                areaHeaderBar.classList.add('hidden');
-                banner.classList.remove('hidden');
-                btn.className = "px-4 py-2 text-xs font-bold bg-amber-500 text-slate-950 rounded-xl transition flex items-center gap-2 shadow-lg shadow-amber-500/30";
-                btnText.textContent = "Sair do Modo Foco";
+                btn.className = "px-3.5 py-2 text-xs font-bold bg-amber-500 text-slate-950 rounded-xl transition flex items-center gap-1.5 shadow-lg shadow-amber-500/30";
+                btnText.textContent = "Sair do Foco";
             } else {
-                areasSec.classList.remove('hidden');
-                gradesSec.classList.remove('hidden');
-                calSec.classList.remove('hidden');
-                areaHeaderBar.classList.remove('hidden');
-                banner.classList.add('hidden');
-                btn.className = "px-4 py-2 text-xs font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 rounded-xl transition flex items-center gap-2";
-                btnText.textContent = "Modo Foco de Hoje";
+                btn.className = "px-3.5 py-2 text-xs font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 rounded-xl transition flex items-center gap-1.5";
+                btnText.textContent = "Modo Foco";
             }
             renderAll();
         }
 
         // ========================================================
-        // 1. RENDERIZAÇÃO DAS "PARTES DA VIDA"
+        // 1. RENDERIZAÇÃO E EXCLUSÃO DAS "PARTES DA VIDA"
         // ========================================================
         function renderAreas() {
             const grid = document.getElementById('life-areas-grid');
@@ -619,7 +1023,7 @@
                 const urgentCount = areaTasks.filter(t => getDaysDiff(t.date) <= alertWindowDays).length;
 
                 return `
-                    <div onclick="selectArea('${area.id}')" class="cursor-pointer p-5 rounded-2xl border transition-all ${
+                    <div onclick="selectArea('${area.id}')" class="group relative cursor-pointer p-4 sm:p-5 rounded-2xl border transition-all ${
                         isSelected 
                         ? 'bg-slate-800/90 border-indigo-500 shadow-lg shadow-indigo-500/10 scale-[1.01]' 
                         : 'bg-slate-900/60 border-slate-800 hover:border-slate-700'
@@ -628,11 +1032,21 @@
                             <div class="p-2.5 rounded-xl border ${area.badgeClass}">
                                 <i data-lucide="${area.icon}" class="w-5 h-5"></i>
                             </div>
-                            ${urgentCount > 0 ? `
-                                <span class="px-2 py-0.5 text-[11px] font-semibold rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 flex items-center gap-1">
-                                    <i data-lucide="alert-circle" class="w-3 h-3"></i> ${urgentCount} próx.
-                                </span>
-                            ` : `<span class="text-xs text-slate-500">${areaTasks.length} pendentes</span>`}
+                            <div class="flex items-center gap-1.5">
+                                ${urgentCount > 0 ? `
+                                    <span class="px-2 py-0.5 text-[11px] font-semibold rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 flex items-center gap-1">
+                                        <i data-lucide="alert-circle" class="w-3 h-3"></i> ${urgentCount} próx.
+                                    </span>
+                                ` : `<span class="text-xs text-slate-500">${areaTasks.length} pend.</span>`}
+                                
+                                <button 
+                                    onclick="deleteArea('${area.id}', event)" 
+                                    title="Apagar Parte da Vida '${area.name}'"
+                                    class="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition"
+                                >
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </div>
                         </div>
                         <h3 class="text-base font-bold text-white mt-3">${area.name}</h3>
                         <p class="text-xs text-slate-400 mt-1 truncate">${area.sublists.join(' • ')}</p>
@@ -661,16 +1075,69 @@
                 color: 'cyan',
                 badgeClass: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
                 dotClass: 'bg-cyan-400',
-                sublists: sublists
+                sublists: sublists.length > 0 ? sublists : ['Geral']
             };
             areas.push(newArea);
             activeAreaId = newArea.id;
+            activeSublist = 'Todas';
             saveData();
             renderAll();
         }
 
+        function deleteArea(areaId, event) {
+            if (event) event.stopPropagation();
+            if (areas.length <= 1) {
+                alert('Você precisa manter pelo menos uma Parte da Vida ativa no painel.');
+                return;
+            }
+            const area = areas.find(a => a.id === areaId);
+            if (!area) return;
+
+            const areaTasksCount = tasks.filter(t => t.areaId === areaId).length;
+            const msg = areaTasksCount > 0
+                ? `Tem certeza que deseja apagar a Parte da Vida "${area.name}" e suas ${areaTasksCount} tarefa(s) cadastrada(s)?`
+                : `Tem certeza que deseja apagar a Parte da Vida "${area.name}"?`;
+
+            if (confirm(msg)) {
+                areas = areas.filter(a => a.id !== areaId);
+                tasks = tasks.filter(t => t.areaId !== areaId);
+                if (activeAreaId === areaId) {
+                    activeAreaId = areas[0].id;
+                    activeSublist = 'Todas';
+                }
+                saveData();
+                renderAll();
+            }
+        }
+
+        function deleteSublist(sublistName, event) {
+            if (event) event.stopPropagation();
+            const area = areas.find(a => a.id === activeAreaId);
+            if (!area) return;
+
+            if (area.sublists.length <= 1) {
+                alert('Cada Parte da Vida precisa ter pelo menos uma lista.');
+                return;
+            }
+
+            const tasksInSublist = tasks.filter(t => t.areaId === activeAreaId && t.sublist === sublistName);
+            const confirmMsg = tasksInSublist.length > 0
+                ? `Deseja apagar a lista "${sublistName}"? As ${tasksInSublist.length} tarefa(s) dentro dela também serão removidas.`
+                : `Deseja apagar a lista "${sublistName}"?`;
+
+            if (confirm(confirmMsg)) {
+                area.sublists = area.sublists.filter(s => s !== sublistName);
+                tasks = tasks.filter(t => !(t.areaId === activeAreaId && t.sublist === sublistName));
+                if (activeSublist === sublistName) {
+                    activeSublist = 'Todas';
+                }
+                saveData();
+                renderAll();
+            }
+        }
+
         // ========================================================
-        // 2. BUSCA INSTANTÂNEA, FILTRO DE PRIORIDADE E SUB-TAREFAS
+        // 2. BUSCA, FILTROS, EDIÇÃO DE TAREFAS E SUB-TAREFAS COM DATA
         // ========================================================
         function setPriorityFilter(prio) {
             activePriorityFilter = prio;
@@ -688,9 +1155,7 @@
 
         function handleSearchAndFilter() {
             const q = document.getElementById('search-input').value;
-            const clearBtn = document.getElementById('clear-search-btn');
-            if (q.length > 0) clearBtn.classList.remove('hidden');
-            else clearBtn.classList.add('hidden');
+            document.getElementById('clear-search-btn').classList.toggle('hidden', q.length === 0);
             renderActiveAreaDetails();
         }
 
@@ -699,14 +1164,51 @@
             handleSearchAndFilter();
         }
 
-        function getPriorityBadge(priority) {
-            if (priority === 'alta') {
-                return `<span class="px-2 py-0.5 text-[10px] font-bold rounded-md bg-rose-500/20 text-rose-300 border border-rose-500/30">🔴 Alta</span>`;
+        function getInteractivePrioritySelect(task) {
+            const prio = task.priority || 'media';
+            let styleClass = 'bg-amber-500/15 text-amber-300 border-amber-500/30';
+            if (prio === 'alta') styleClass = 'bg-rose-500/20 text-rose-300 border-rose-500/30';
+            if (prio === 'baixa') styleClass = 'bg-sky-500/15 text-sky-300 border-sky-500/30';
+
+            return `
+                <select 
+                    onchange="updateTaskPriority(${task.id}, this.value)" 
+                    title="Clique para alterar a prioridade"
+                    class="px-2 py-0.5 text-[10px] font-bold rounded-md border cursor-pointer focus:outline-none transition ${styleClass}"
+                >
+                    <option value="alta" class="bg-slate-900 text-rose-300" ${prio === 'alta' ? 'selected' : ''}>🔴 Alta</option>
+                    <option value="media" class="bg-slate-900 text-amber-300" ${prio === 'media' ? 'selected' : ''}>🟡 Média</option>
+                    <option value="baixa" class="bg-slate-900 text-sky-300" ${prio === 'baixa' ? 'selected' : ''}>🔵 Baixa</option>
+                </select>
+            `;
+        }
+
+        function updateTaskPriority(taskId, newPriority) {
+            const task = tasks.find(t => t.id === taskId);
+            if (task) {
+                task.priority = newPriority;
+                saveData();
+                renderAll();
             }
-            if (priority === 'baixa') {
-                return `<span class="px-2 py-0.5 text-[10px] font-semibold rounded-md bg-sky-500/15 text-sky-300 border border-sky-500/30">🔵 Baixa</span>`;
+        }
+
+        function updateTaskDate(taskId, newDate) {
+            if (!newDate) return;
+            const task = tasks.find(t => t.id === taskId);
+            if (task) {
+                task.date = newDate;
+                saveData();
+                renderAll();
             }
-            return `<span class="px-2 py-0.5 text-[10px] font-semibold rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/30">🟡 Média</span>`;
+        }
+
+        function updateTaskTime(taskId, newTime) {
+            const task = tasks.find(t => t.id === taskId);
+            if (task) {
+                task.time = newTime || '12:00';
+                saveData();
+                renderAll();
+            }
         }
 
         function renderActiveAreaDetails() {
@@ -716,49 +1218,54 @@
             document.getElementById('active-area-icon').className = `p-3 rounded-xl border ${area.badgeClass}`;
             document.getElementById('active-area-icon').innerHTML = `<i data-lucide="${area.icon}" class="w-6 h-6"></i>`;
 
-            // Abas de sub-listas
             const tabsContainer = document.getElementById('sublists-tabs');
             const allTabs = ['Todas', ...area.sublists];
-            tabsContainer.innerHTML = allTabs.map(sub => `
-                <button onclick="selectSublist('${sub}')" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold transition ${
-                    activeSublist === sub 
-                    ? 'bg-indigo-500 text-white shadow' 
-                    : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'
-                }">
-                    ${sub}
-                </button>
-            `).join('') + `
+            tabsContainer.innerHTML = allTabs.map(sub => {
+                const isSelected = activeSublist === sub;
+                return `
+                    <div class="inline-flex items-center rounded-xl text-xs font-semibold transition border ${
+                        isSelected 
+                        ? 'bg-indigo-500 text-white border-indigo-400 shadow' 
+                        : 'bg-slate-800 text-slate-400 hover:text-white border-slate-700'
+                    }">
+                        <button onclick="selectSublist('${sub}')" class="px-3 py-1.5">${sub}</button>
+                        ${sub !== 'Todas' ? `
+                            <button 
+                                onclick="deleteSublist('${sub}', event)" 
+                                title="Apagar lista '${sub}'" 
+                                class="pr-2.5 pl-0.5 py-1.5 opacity-70 hover:opacity-100 hover:text-rose-300 transition"
+                            >
+                                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                            </button>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('') + `
                 <button onclick="addNewSublist()" class="px-2.5 py-1.5 rounded-xl text-xs font-medium bg-slate-800/60 hover:bg-slate-800 text-indigo-400 border border-dashed border-slate-700 flex items-center gap-1">
-                    <i data-lucide="plus" class="w-3.5 h-3.5"></i> Lista
+                    <i data-lucide="plus" class="w-3.5 h-3.5"></i> Nova Lista
                 </button>
             `;
 
-            // Preenche select de sub-lista do formulário
             const selectEl = document.getElementById('task-sublist');
             const currentVal = selectEl.value;
             selectEl.innerHTML = area.sublists.map(sub => `<option value="${sub}">${sub}</option>`).join('');
             if (activeSublist !== 'Todas') selectEl.value = activeSublist;
             else if (area.sublists.includes(currentVal)) selectEl.value = currentVal;
 
-            // 1. Filtra por Modo Foco ou Área Atual
             let filtered = [];
             if (isFocusMode) {
                 filtered = tasks.filter(t => getDaysDiff(t.date) <= 0);
                 const pendingToday = filtered.filter(t => !t.done).length;
-                document.getElementById('focus-stats-count').textContent = `${pendingToday} ${pendingToday === 1 ? 'meta pendente' : 'metas pendentes'}`;
+                document.getElementById('focus-stats-count').textContent = `${pendingToday} ${pendingToday === 1 ? 'pendente' : 'pendentes'}`;
             } else {
                 filtered = tasks.filter(t => t.areaId === activeAreaId);
-                if (activeSublist !== 'Todas') {
-                    filtered = filtered.filter(t => t.sublist === activeSublist);
-                }
+                if (activeSublist !== 'Todas') filtered = filtered.filter(t => t.sublist === activeSublist);
             }
 
-            // 2. Filtra por Prioridade
             if (activePriorityFilter !== 'todas') {
                 filtered = filtered.filter(t => (t.priority || 'media') === activePriorityFilter);
             }
 
-            // 3. Filtra por Busca Instantânea
             const searchQuery = document.getElementById('search-input').value.trim().toLowerCase();
             if (searchQuery) {
                 filtered = filtered.filter(t => {
@@ -769,17 +1276,12 @@
                 });
             }
 
-            // 4. Ordenação
             const sortMode = document.getElementById('sort-select').value;
             const prioWeight = { alta: 3, media: 2, baixa: 1 };
             filtered.sort((a, b) => {
-                if (a.done !== b.done) return a.done ? 1 : -1; // Não concluídas primeiro
-                if (sortMode === 'priority') {
-                    return (prioWeight[b.priority] || 2) - (prioWeight[a.priority] || 2);
-                }
-                if (sortMode === 'progress') {
-                    return getTaskProgress(b).pct - getTaskProgress(a).pct;
-                }
+                if (a.done !== b.done) return a.done ? 1 : -1;
+                if (sortMode === 'priority') return (prioWeight[b.priority] || 2) - (prioWeight[a.priority] || 2);
+                if (sortMode === 'progress') return getTaskProgress(b).pct - getTaskProgress(a).pct;
                 return a.date.localeCompare(b.date);
             });
 
@@ -787,7 +1289,7 @@
             if (filtered.length === 0) {
                 listContainer.innerHTML = `
                     <div class="text-center py-10 text-slate-500 text-sm border border-dashed border-slate-800 rounded-xl">
-                        ${isFocusMode ? '🎉 Nenhuma tarefa pendente ou atrasada para hoje!' : 'Nenhuma atividade encontrada com os filtros atuais.'}
+                        ${isFocusMode ? '🎉 Nenhuma tarefa pendente ou atrasada para hoje!' : 'Nenhuma atividade encontrada nesta lista.'}
                     </div>
                 `;
                 lucide.createIcons();
@@ -808,20 +1310,16 @@
                     else if (diff <= alertWindowDays) urgencyBadge = `<span class="px-2 py-0.5 text-[10px] font-semibold rounded bg-indigo-500/20 text-indigo-300">Faltam ${diff} dias</span>`;
                 }
 
-                // Aviso especial quando as sub-tarefas chegam a 100%, mas a tarefa principal ainda não foi concluída manualmente
                 const readyToCompleteBadge = (progress.total > 0 && progress.pct === 100 && !task.done)
                     ? `<span class="px-2 py-0.5 text-[10px] font-bold rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1">
-                        <i data-lucide="sparkles" class="w-3 h-3"></i> 100% das etapas prontas (Clique no check para concluir)
+                        <i data-lucide="sparkles" class="w-3 h-3"></i> Etapas em 100% (Clique no check para concluir)
                        </span>`
                     : '';
 
                 return `
                     <div class="p-4 rounded-xl bg-slate-950/60 hover:bg-slate-950/90 border ${progress.pct === 100 && !task.done ? 'border-emerald-500/50' : 'border-slate-800/90'} transition space-y-3">
-                        
-                        <!-- Linha Principal da Tarefa -->
                         <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
                             <div class="flex items-start gap-3">
-                                <!-- Botão Manual de Concluir Tarefa Principal -->
                                 <button onclick="toggleTaskDone(${task.id})" title="Concluir tarefa principal manualmente" class="mt-0.5 w-6 h-6 rounded-lg border-2 flex items-center justify-center transition shrink-0 ${
                                     task.done 
                                     ? 'bg-emerald-500 border-emerald-400 text-slate-950 shadow-md shadow-emerald-500/20' 
@@ -830,22 +1328,40 @@
                                     ${task.done ? '<i data-lucide="check" class="w-4 h-4 stroke-[3]"></i>' : ''}
                                 </button>
 
-                                <div class="space-y-1">
+                                <div class="space-y-1.5">
                                     <div class="flex flex-wrap items-center gap-2">
                                         <span class="text-sm font-bold ${task.done ? 'line-through text-slate-500' : 'text-white'}">${task.title}</span>
                                         ${isFocusMode ? `<span class="px-2 py-0.5 text-[10px] font-semibold rounded border ${taskArea.badgeClass}">${taskArea.name}</span>` : ''}
                                         <span class="px-2 py-0.5 text-[10px] rounded-md bg-slate-800 text-slate-300 border border-slate-700">${task.sublist}</span>
-                                        ${getPriorityBadge(task.priority)}
+                                        
+                                        ${getInteractivePrioritySelect(task)}
+                                        
                                         ${urgencyBadge}
                                         ${readyToCompleteBadge}
                                     </div>
 
-                                    <div class="text-xs text-slate-400 flex flex-wrap items-center gap-3 pt-0.5">
-                                        <span class="flex items-center gap-1"><i data-lucide="calendar" class="w-3.5 h-3.5"></i> ${formatDateBR(task.date)}</span>
-                                        <span class="flex items-center gap-1"><i data-lucide="clock" class="w-3.5 h-3.5"></i> ${task.time}</span>
+                                    <div class="text-xs text-slate-400 flex flex-wrap items-center gap-2 sm:gap-3 pt-0.5">
+                                        <label class="inline-flex items-center gap-1 bg-slate-900/90 border border-slate-800 hover:border-slate-700 px-2 py-0.5 rounded-lg" title="Alterar data da tarefa">
+                                            <i data-lucide="calendar" class="w-3.5 h-3.5 text-indigo-400"></i>
+                                            <input 
+                                                type="date" 
+                                                value="${task.date}" 
+                                                onchange="updateTaskDate(${task.id}, this.value)" 
+                                                class="bg-transparent text-xs text-slate-200 focus:outline-none cursor-pointer"
+                                            >
+                                        </label>
+
+                                        <label class="inline-flex items-center gap-1 bg-slate-900/90 border border-slate-800 hover:border-slate-700 px-2 py-0.5 rounded-lg" title="Alterar horário da tarefa">
+                                            <i data-lucide="clock" class="w-3.5 h-3.5 text-cyan-400"></i>
+                                            <input 
+                                                type="time" 
+                                                value="${task.time}" 
+                                                onchange="updateTaskTime(${task.id}, this.value)" 
+                                                class="bg-transparent text-xs text-slate-200 focus:outline-none cursor-pointer"
+                                            >
+                                        </label>
                                         
-                                        <!-- Botão de Alternar Sub-tarefas -->
-                                        <button onclick="toggleExpandSubtasks(${task.id})" class="text-indigo-400 hover:text-indigo-300 font-medium flex items-center gap-1">
+                                        <button onclick="toggleExpandSubtasks(${task.id})" class="text-indigo-400 hover:text-indigo-300 font-medium flex items-center gap-1 px-1 py-0.5">
                                             <i data-lucide="list-checks" class="w-3.5 h-3.5"></i>
                                             <span>${progress.doneCount}/${progress.total} etapas (${progress.pct}%)</span>
                                             <i data-lucide="${isExpanded ? 'chevron-up' : 'chevron-down'}" class="w-3.5 h-3.5"></i>
@@ -854,26 +1370,23 @@
                                 </div>
                             </div>
 
-                            <!-- Ações Direita: Botão de Link Rápido + Editar Link + Excluir -->
                             <div class="flex flex-wrap items-center gap-2 self-end lg:self-center">
                                 ${task.link ? `
                                     <a href="${task.link}" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 flex items-center gap-1.5 transition">
                                         <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
-                                        <span>${task.linkLabel || 'Abrir Link Rápido'}</span>
+                                        <span>${task.linkLabel || 'Abrir Link'}</span>
                                     </a>
                                 ` : `
-                                    <button onclick="promptAddLink(${task.id})" class="px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-cyan-300 border border-slate-800 transition flex items-center gap-1" title="Anexar link rápido a esta tarefa">
+                                    <button onclick="promptAddLink(${task.id})" class="px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-cyan-300 border border-slate-800 transition flex items-center gap-1">
                                         <i data-lucide="link" class="w-3 h-3"></i> + Link
                                     </button>
                                 `}
-
                                 <button onclick="deleteTask(${task.id})" class="text-slate-500 hover:text-rose-400 p-1.5 rounded-lg transition" title="Remover atividade">
                                     <i data-lucide="trash-2" class="w-4 h-4"></i>
                                 </button>
                             </div>
                         </div>
 
-                        <!-- BARRA DE PROGRESSO VISUAL DAS SUB-TAREFAS -->
                         ${progress.total > 0 ? `
                             <div class="space-y-1 pt-1">
                                 <div class="flex justify-between text-[11px]">
@@ -886,39 +1399,57 @@
                             </div>
                         ` : ''}
 
-                        <!-- PAINEL INTERNO DE SUB-TAREFAS (CHECKLIST) -->
                         ${isExpanded ? `
                             <div class="pt-2 pl-2 sm:pl-8 border-t border-slate-800/70 space-y-2">
                                 <div class="space-y-1.5">
                                     ${(task.subtasks || []).map(st => `
-                                        <div class="flex items-center justify-between gap-2 bg-slate-900/70 px-3 py-1.5 rounded-lg border border-slate-800/80">
+                                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-900/70 px-3 py-1.5 rounded-lg border border-slate-800/80">
                                             <label class="flex items-center gap-2.5 text-xs cursor-pointer flex-1">
                                                 <input type="checkbox" ${st.done ? 'checked' : ''} onchange="toggleSubtask(${task.id}, ${st.id})" class="rounded border-slate-600 text-emerald-500 focus:ring-0 cursor-pointer">
                                                 <span class="${st.done ? 'line-through text-slate-500' : 'text-slate-200'}">${st.text}</span>
                                             </label>
-                                            <button onclick="deleteSubtask(${task.id}, ${st.id})" class="text-slate-600 hover:text-rose-400">
-                                                <i data-lucide="x" class="w-3.5 h-3.5"></i>
-                                            </button>
+                                            
+                                            <div class="flex items-center justify-end gap-2">
+                                                <div class="inline-flex items-center gap-1 bg-slate-950/80 border border-slate-800 px-2 py-0.5 rounded text-[11px] text-slate-300" title="Data desta etapa">
+                                                    <i data-lucide="calendar" class="w-3 h-3 text-emerald-400"></i>
+                                                    <input 
+                                                        type="date" 
+                                                        value="${st.date || ''}" 
+                                                        onchange="updateSubtaskDate(${task.id}, ${st.id}, this.value)"
+                                                        class="bg-transparent text-[11px] text-slate-300 focus:outline-none cursor-pointer"
+                                                    >
+                                                </div>
+                                                <button onclick="deleteSubtask(${task.id}, ${st.id})" class="text-slate-600 hover:text-rose-400 p-0.5" title="Excluir etapa">
+                                                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                                                </button>
+                                            </div>
                                         </div>
                                     `).join('')}
                                 </div>
 
-                                <!-- Input rápido para adicionar nova sub-tarefa -->
-                                <div class="flex items-center gap-2">
+                                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1">
                                     <input 
                                         type="text" 
                                         id="subtask-input-${task.id}" 
                                         onkeydown="if(event.key==='Enter'){event.preventDefault(); addSubtask(${task.id});}"
-                                        placeholder="Adicionar nova etapa (ex: Revisar cálculos, Fazer slides)..." 
+                                        placeholder="Adicionar nova etapa..." 
                                         class="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
                                     >
-                                    <button onclick="addSubtask(${task.id})" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-indigo-300 rounded-lg text-xs font-semibold transition flex items-center gap-1">
-                                        <i data-lucide="plus" class="w-3.5 h-3.5"></i> Etapa
-                                    </button>
+                                    <div class="flex items-center gap-2">
+                                        <input 
+                                            type="date" 
+                                            id="subtask-date-${task.id}" 
+                                            value="${task.date}"
+                                            title="Data da etapa (opcional)"
+                                            class="bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-indigo-500"
+                                        >
+                                        <button onclick="addSubtask(${task.id})" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-indigo-300 rounded-lg text-xs font-semibold transition flex items-center gap-1 shrink-0">
+                                            <i data-lucide="plus" class="w-3.5 h-3.5"></i> Etapa
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         ` : ''}
-
                     </div>
                 `;
             }).join('');
@@ -926,7 +1457,6 @@
             lucide.createIcons();
         }
 
-        // Funções de Sub-tarefas (atualizam a % sem auto-concluir a tarefa pai)
         function toggleExpandSubtasks(taskId) {
             if (expandedSubtasks.has(taskId)) expandedSubtasks.delete(taskId);
             else expandedSubtasks.add(taskId);
@@ -935,15 +1465,35 @@
 
         function addSubtask(taskId) {
             const input = document.getElementById(`subtask-input-${taskId}`);
+            const dateInput = document.getElementById(`subtask-date-${taskId}`);
             const text = input.value.trim();
+            const dateVal = dateInput ? dateInput.value : '';
             if (!text) return;
+
             const task = tasks.find(t => t.id === taskId);
             if (task) {
                 if (!task.subtasks) task.subtasks = [];
-                task.subtasks.push({ id: Date.now(), text, done: false });
+                task.subtasks.push({
+                    id: Date.now(),
+                    text,
+                    date: dateVal || '',
+                    done: false
+                });
                 expandedSubtasks.add(taskId);
                 saveData();
                 renderActiveAreaDetails();
+            }
+        }
+
+        function updateSubtaskDate(taskId, subtaskId, newDate) {
+            const task = tasks.find(t => t.id === taskId);
+            if (task && task.subtasks) {
+                const st = task.subtasks.find(s => s.id === subtaskId);
+                if (st) {
+                    st.date = newDate || '';
+                    saveData();
+                    renderActiveAreaDetails();
+                }
             }
         }
 
@@ -953,7 +1503,6 @@
                 const st = task.subtasks.find(s => s.id === subtaskId);
                 if (st) {
                     st.done = !st.done;
-                    // Importante: NÃO altera task.done automaticamente! O usuário decide quando concluir a tarefa principal.
                     saveData();
                     renderActiveAreaDetails();
                 }
@@ -974,9 +1523,9 @@
             if (!task) return;
             const url = prompt('Cole a URL do Link Rápido (ex: https://drive.google.com/...):', task.link || 'https://');
             if (url === null) return;
-            const label = prompt('Nome do botão (ex: Abrir Pasta do Drive, Ver Código):', task.linkLabel || 'Abrir Link Rápido');
+            const label = prompt('Nome do botão (ex: Abrir PDF, Ver Repositório):', task.linkLabel || 'Abrir Link');
             task.link = url.trim();
-            task.linkLabel = label ? label.trim() : 'Abrir Link Rápido';
+            task.linkLabel = label ? label.trim() : 'Abrir Link';
             saveData();
             renderAll();
         }
@@ -990,14 +1539,16 @@
             const area = areas.find(a => a.id === activeAreaId);
             const name = prompt(`Nova sub-lista dentro de "${area.name}":`);
             if (name && name.trim()) {
-                area.sublists.push(name.trim());
-                activeSublist = name.trim();
+                const cleanName = name.trim();
+                if (!area.sublists.includes(cleanName)) {
+                    area.sublists.push(cleanName);
+                }
+                activeSublist = cleanName;
                 saveData();
                 renderAll();
             }
         }
 
-        // Cadastro de nova tarefa pelo formulário
         document.getElementById('add-task-form').addEventListener('submit', function(e) {
             e.preventDefault();
             const title = document.getElementById('task-title').value.trim();
@@ -1010,7 +1561,12 @@
             const initialSubtasksRaw = document.getElementById('task-initial-subtasks').value.trim();
 
             const subtasks = initialSubtasksRaw
-                ? initialSubtasksRaw.split(',').map((s, idx) => ({ id: Date.now() + idx, text: s.trim(), done: false })).filter(s => s.text)
+                ? initialSubtasksRaw.split(',').map((s, idx) => ({
+                    id: Date.now() + idx,
+                    text: s.trim(),
+                    date: date,
+                    done: false
+                })).filter(s => s.text)
                 : [];
 
             if (title && date) {
@@ -1024,7 +1580,7 @@
                     time,
                     done: false,
                     link,
-                    linkLabel: linkLabel || 'Abrir Link Rápido',
+                    linkLabel: linkLabel || 'Abrir Link',
                     subtasks
                 };
                 tasks.push(newTask);
@@ -1084,21 +1640,10 @@
             const totalPointsNeeded = subject.target * totalWeight;
             const pointsStillNeeded = totalPointsNeeded - weightedSum;
 
-            let neededAverageOnRemaining = 0;
-            if (remainingWeight > 0) {
-                neededAverageOnRemaining = pointsStillNeeded / remainingWeight;
-            }
-
+            const neededAverageOnRemaining = remainingWeight > 0 ? (pointsStillNeeded / remainingWeight) : 0;
             const finalAverageIfDone = totalWeight > 0 ? (weightedSum / totalWeight) : 0;
 
-            return {
-                totalWeight,
-                completedWeight,
-                remainingWeight,
-                currentAverage,
-                neededAverageOnRemaining,
-                finalAverageIfDone
-            };
+            return { totalWeight, completedWeight, remainingWeight, currentAverage, neededAverageOnRemaining, finalAverageIfDone };
         }
 
         function renderGradesCalculator() {
@@ -1106,7 +1651,7 @@
             if (subjects.length === 0) {
                 container.innerHTML = `
                     <div class="col-span-2 text-center py-8 text-slate-500 text-sm border border-dashed border-slate-800 rounded-xl">
-                        Nenhuma disciplina cadastrada. Adicione suas matérias acima para simular notas e pesos!
+                        Nenhuma disciplina cadastrada. Adicione suas matérias acima!
                     </div>
                 `;
                 return;
@@ -1119,42 +1664,39 @@
                 if (m.totalWeight === 0) {
                     statusBanner = `<span class="text-xs text-slate-400">Adicione avaliações abaixo</span>`;
                 } else if (m.remainingWeight === 0) {
-                    if (m.finalAverageIfDone >= sub.target) {
-                        statusBanner = `<span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">✅ Aprovado! Média Final: ${m.finalAverageIfDone.toFixed(2)}</span>`;
-                    } else {
-                        statusBanner = `<span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">⚠️ Abaixo da meta (${m.finalAverageIfDone.toFixed(2)} / ${sub.target.toFixed(1)})</span>`;
-                    }
+                    statusBanner = m.finalAverageIfDone >= sub.target
+                        ? `<span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">✅ Aprovado! Média Final: ${m.finalAverageIfDone.toFixed(2)}</span>`
+                        : `<span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">⚠️ Abaixo da meta (${m.finalAverageIfDone.toFixed(2)} / ${sub.target.toFixed(1)})</span>`;
                 } else {
                     if (m.neededAverageOnRemaining <= 0) {
-                        statusBanner = `<span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">🎉 Já atingiu a pontuação para média ${sub.target.toFixed(1)}!</span>`;
+                        statusBanner = `<span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">🎉 Pontuação para média ${sub.target.toFixed(1)} já atingida!</span>`;
                     } else if (m.neededAverageOnRemaining > 10) {
-                        statusBanner = `<span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">⚠️ Precisa de ${m.neededAverageOnRemaining.toFixed(2)} nas restantes (Provas Finais)</span>`;
+                        statusBanner = `<span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">⚠️ Precisa de ${m.neededAverageOnRemaining.toFixed(2)} nas restantes</span>`;
                     } else {
                         statusBanner = `<span class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30">🎯 Precisa de <strong>${m.neededAverageOnRemaining.toFixed(2)}</strong> nas avaliações em aberto</span>`;
                     }
                 }
 
                 return `
-                    <div class="bg-slate-950/60 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between space-y-4">
+                    <div class="bg-slate-950/60 border border-slate-800 rounded-2xl p-4 sm:p-5 flex flex-col justify-between space-y-4">
                         <div class="space-y-3">
                             <div class="flex items-start justify-between gap-2 border-b border-slate-800 pb-3">
                                 <div>
                                     <h3 class="text-base font-bold text-white">${sub.name}</h3>
-                                    <span class="text-xs text-slate-400">Meta de aprovação: <strong>${sub.target.toFixed(1)}</strong> • Média parcial: <strong class="text-cyan-400">${m.currentAverage.toFixed(2)}</strong></span>
+                                    <span class="text-xs text-slate-400">Meta: <strong>${sub.target.toFixed(1)}</strong> • Média parcial: <strong class="text-cyan-400">${m.currentAverage.toFixed(2)}</strong></span>
                                 </div>
-                                <button onclick="deleteSubject(${sub.id})" class="text-slate-500 hover:text-rose-400 p-1" title="Remover disciplina">
+                                <button onclick="deleteSubject(${sub.id})" class="text-slate-500 hover:text-rose-400 p-1">
                                     <i data-lucide="trash-2" class="w-4 h-4"></i>
                                 </button>
                             </div>
 
                             <div>${statusBanner}</div>
 
-                            <!-- Lista de Avaliações da Disciplina -->
                             <div class="space-y-2 pt-1">
                                 <div class="grid grid-cols-12 gap-2 text-[10px] font-bold uppercase text-slate-500 px-2">
                                     <div class="col-span-6">Avaliação</div>
                                     <div class="col-span-2 text-center">Peso</div>
-                                    <div class="col-span-3 text-center">Nota (0-10)</div>
+                                    <div class="col-span-3 text-center">Nota</div>
                                     <div class="col-span-1"></div>
                                 </div>
 
@@ -1162,10 +1704,10 @@
                                     <div class="grid grid-cols-12 gap-2 items-center bg-slate-900/80 p-2 rounded-xl border border-slate-800/80 text-xs">
                                         <div class="col-span-6 font-medium text-slate-200 truncate" title="${a.name}">${a.name}</div>
                                         <div class="col-span-2">
-                                            <input type="number" step="0.5" min="0.1" value="${a.weight}" onchange="updateAssessment(${sub.id},${a.id}, 'weight', this.value)" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-center text-white focus:outline-none focus:border-indigo-500">
+                                            <input type="number" step="0.5" min="0.1" value="${a.weight}" onchange="updateAssessment(${sub.id},${a.id}, 'weight', this.value)" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-1.5 py-1 text-center text-white focus:outline-none">
                                         </div>
                                         <div class="col-span-3">
-                                            <input type="number" step="0.1" min="0" max="10" placeholder="Em aberto" value="${a.grade !== null ? a.grade : ''}" onchange="updateAssessment(${sub.id},${a.id}, 'grade', this.value)" class="w-full bg-slate-950 border ${a.grade !== null && a.grade !== '' ? 'border-emerald-500/50 text-emerald-300 font-bold' : 'border-slate-700 text-white'} rounded-lg px-2 py-1 text-center focus:outline-none focus:border-indigo-500">
+                                            <input type="number" step="0.1" min="0" max="10" placeholder="Aberta" value="${a.grade !== null ? a.grade : ''}" onchange="updateAssessment(${sub.id},${a.id}, 'grade', this.value)" class="w-full bg-slate-950 border ${a.grade !== null && a.grade !== '' ? 'border-emerald-500/50 text-emerald-300 font-bold' : 'border-slate-700 text-white'} rounded-lg px-1.5 py-1 text-center focus:outline-none">
                                         </div>
                                         <div class="col-span-1 text-right">
                                             <button onclick="deleteAssessment(${sub.id},${a.id})" class="text-slate-600 hover:text-rose-400">
@@ -1177,10 +1719,9 @@
                             </div>
                         </div>
 
-                        <!-- Adicionar nova avaliação na disciplina -->
                         <div class="flex items-center gap-2 pt-3 border-t border-slate-800/80">
-                            <input type="text" id="assess-name-${sub.id}" placeholder="Nova nota (ex: 3ª VA, Lab)..." class="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500">
-                            <input type="number" id="assess-weight-${sub.id}" placeholder="Peso" value="1" step="0.5" min="0.1" class="w-16 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-center text-white focus:outline-none">
+                            <input type="text" id="assess-name-${sub.id}" placeholder="Nova avaliação..." class="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none">
+                            <input type="number" id="assess-weight-${sub.id}" value="1" step="0.5" min="0.1" class="w-14 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-center text-white focus:outline-none">
                             <button onclick="addAssessment(${sub.id})" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-indigo-300 rounded-lg text-xs font-semibold transition flex items-center gap-1">
                                 <i data-lucide="plus" class="w-3.5 h-3.5"></i> Nota
                             </button>
@@ -1218,11 +1759,8 @@
             const assess = sub.assessments.find(a => a.id === assessId);
             if (!assess) return;
 
-            if (field === 'weight') {
-                assess.weight = parseFloat(value) || 1;
-            } else if (field === 'grade') {
-                assess.grade = value === '' ? null : parseFloat(value);
-            }
+            if (field === 'weight') assess.weight = parseFloat(value) || 1;
+            else if (field === 'grade') assess.grade = value === '' ? null : parseFloat(value);
             saveData();
             renderGradesCalculator();
         }
@@ -1272,12 +1810,8 @@
         function updateUrgentBadge() {
             const upcoming = getUpcomingTasks();
             const badge = document.getElementById('urgent-badge');
-            if (upcoming.length > 0) {
-                badge.textContent = upcoming.length;
-                badge.classList.remove('hidden');
-            } else {
-                badge.classList.add('hidden');
-            }
+            badge.textContent = upcoming.length;
+            badge.classList.toggle('hidden', upcoming.length === 0);
         }
 
         function changeAlertWindow(days) {
@@ -1294,9 +1828,7 @@
             container.innerHTML = '';
 
             upcoming.slice(0, 3).forEach(task => {
-                if (!dismissedToasts.has(task.id)) {
-                    showSingleToast(task);
-                }
+                if (!dismissedToasts.has(task.id)) showSingleToast(task);
             });
         }
 
@@ -1306,8 +1838,8 @@
             const diff = getDaysDiff(task.date);
             const progress = getTaskProgress(task);
 
-            let statusLabel = diff < 0 ? `ATRASADA HÁ ${Math.abs(diff)}D` : (diff === 0 ? `HOJE ÀS ${task.time}` : (diff === 1 ? `AMANHÃ ÀS ${task.time}` : `FALTAM ${diff} DIAS`));
-            let borderClass = diff <= 0 ? 'border-amber-500/80' : 'border-indigo-500/70';
+            const statusLabel = diff < 0 ? `ATRASADA HÁ ${Math.abs(diff)}D` : (diff === 0 ? `HOJE ÀS ${task.time}` : (diff === 1 ? `AMANHÃ ÀS ${task.time}` : `FALTAM ${diff} DIAS`));
+            const borderClass = diff <= 0 ? 'border-amber-500/80' : 'border-indigo-500/70';
 
             const toastEl = document.createElement('div');
             toastEl.id = `toast-${task.id}`;
@@ -1347,29 +1879,15 @@
             if (el) el.remove();
         }
 
-        function requestWindowsNotification() {
-            if (!("Notification" in window)) {
-                alert("Seu navegador não suporta notificações nativas.");
-                return;
-            }
-            Notification.requestPermission().then(permission => {
-                if (permission === "granted") {
-                    document.getElementById('win-notify-text').textContent = "Windows Ativo";
-                    new Notification("Alertas Ativados!", { body: "Você receberá avisos das suas tarefas próximas." });
-                }
-            });
-        }
-
         function toggleAlertModal() {
             const modal = document.getElementById('alert-modal');
             modal.classList.toggle('hidden');
             if (!modal.classList.contains('hidden')) {
                 const upcoming = getUpcomingTasks();
                 const listEl = document.getElementById('alert-modal-list');
-                if (upcoming.length === 0) {
-                    listEl.innerHTML = `<p class="text-sm text-slate-400 text-center py-6">Nenhuma atividade pendente para os próximos ${alertWindowDays} dias.</p>`;
-                } else {
-                    listEl.innerHTML = upcoming.map(t => {
+                listEl.innerHTML = upcoming.length === 0
+                    ? `<p class="text-sm text-slate-400 text-center py-6">Nenhuma atividade pendente para os próximos ${alertWindowDays} dias.</p>`
+                    : upcoming.map(t => {
                         const area = areas.find(a => a.id === t.areaId) || areas[0];
                         return `
                             <div class="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-800">
@@ -1384,7 +1902,6 @@
                             </div>
                         `;
                     }).join('');
-                }
             }
         }
 
@@ -1400,7 +1917,7 @@
 
             document.getElementById('calendar-legend').innerHTML = areas.map(a => `
                 <div class="flex items-center gap-1.5 text-slate-300">
-                    <span class="w-2.5 h-2.5 rounded-full ${a.dotClass}"></span>
+                    <span class="w-2.5 h-2.5 rounded-full ${a.dotClass || 'bg-indigo-400'}"></span>
                     <span>${a.name}</span>
                 </div>
             `).join('');
@@ -1412,7 +1929,7 @@
             let cellsHtml = '';
 
             for (let i = 0; i < firstDayIndex; i++) {
-                cellsHtml += `<div class="h-20 rounded-xl bg-slate-950/20 border border-slate-800/30"></div>`;
+                cellsHtml += `<div class="h-16 sm:h-24 rounded-xl bg-slate-950/20 border border-slate-800/30"></div>`;
             }
 
             for (let day = 1; day <= daysInMonth; day++) {
@@ -1421,26 +1938,26 @@
                 const isToday = dateStr === TODAY_STR;
                 const isSelected = dateStr === selectedDateStr;
 
-                const dotsHtml = dayTasks.slice(0, 3).map(t => {
+                const dotsHtml = dayTasks.slice(0, 2).map(t => {
                     const area = areas.find(a => a.id === t.areaId) || areas[0];
                     return `
-                        <div class="text-[10px] truncate px-1.5 py-0.5 rounded ${area.badgeClass} ${t.done ? 'line-through opacity-50' : ''}">
+                        <div class="text-[9px] sm:text-[10px] truncate px-1 py-0.5 rounded ${area.badgeClass} ${t.done ? 'line-through opacity-50' : ''}">
                             ${t.title}
                         </div>
                     `;
                 }).join('');
 
                 cellsHtml += `
-                    <div onclick="selectCalendarDate('${dateStr}')" class="h-24 p-1.5 rounded-xl border cursor-pointer transition flex flex-col justify-between overflow-hidden ${
+                    <div onclick="selectCalendarDate('${dateStr}')" class="h-16 sm:h-24 p-1 sm:p-1.5 rounded-xl border cursor-pointer transition flex flex-col justify-between overflow-hidden ${
                         isSelected 
                         ? 'bg-slate-800/90 border-emerald-400 shadow-md' 
                         : (isToday ? 'bg-slate-900 border-indigo-500/60' : 'bg-slate-950/50 border-slate-800/80 hover:border-slate-700')
                     }">
                         <div class="flex items-center justify-between">
-                            <span class="text-xs font-bold ${isToday ? 'bg-indigo-500 text-white px-1.5 py-0.5 rounded-md' : 'text-slate-300'}">${day}</span>
-                            ${dayTasks.length > 3 ? `<span class="text-[10px] text-slate-400">+${dayTasks.length - 3}</span>` : ''}
+                            <span class="text-[11px] sm:text-xs font-bold ${isToday ? 'bg-indigo-500 text-white px-1.5 py-0.5 rounded-md' : 'text-slate-300'}">${day}</span>
+                            ${dayTasks.length > 2 ? `<span class="text-[9px] text-slate-400">+${dayTasks.length - 2}</span>` : ''}
                         </div>
-                        <div class="space-y-1 overflow-hidden">
+                        <div class="space-y-0.5 overflow-hidden">
                             ${dotsHtml}
                         </div>
                     </div>
@@ -1514,9 +2031,14 @@
         }
 
         // Inicialização
+        checkMagicSyncUrlHash();
         document.getElementById('task-date').value = TODAY_STR;
         renderAll();
-        setTimeout(() => triggerPopups(false), 500);
+        setTimeout(() => triggerPopups(false), 600);
+
+        if (ghToken) {
+            pullFromCloud(false);
+        }
     </script>
 </body>
 </html>
